@@ -47,10 +47,9 @@ ScreenGui.Name = "HirukuInternal"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
--- Кнопка открытия меню
 local CircleButton = Instance.new("TextButton")
-CircleButton.Size = UDim2.new(0, 70, 0, 70)
-CircleButton.Position = UDim2.new(0.02, 0, 0.5, -35)
+CircleButton.Size = UDim2.new(0, 65, 0, 65)
+CircleButton.Position = UDim2.new(0.02, 0, 0.5, -32)
 CircleButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 CircleButton.Text = "H"
 CircleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -65,10 +64,9 @@ local circleCorner = Instance.new("UICorner")
 circleCorner.CornerRadius = UDim.new(1, 0)
 circleCorner.Parent = CircleButton
 
--- Главное окно (как на 2 фото)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 700, 0, 500)
-MainFrame.Position = UDim2.new(0.5, -350, 0.5, -250)
+MainFrame.Size = UDim2.new(0, 600, 0, 450)
+MainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 1
@@ -80,7 +78,6 @@ local mainCorner = Instance.new("UICorner")
 mainCorner.CornerRadius = UDim.new(0, 8)
 mainCorner.Parent = MainFrame
 
--- Заголовок
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 40)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -96,12 +93,12 @@ TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.TextScaled = false
 TitleText.Font = Enum.Font.Code
-TitleText.TextSize = 20
+TitleText.TextSize = 18
 TitleText.Parent = TitleBar
 
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.Size = UDim2.new(0, 28, 0, 28)
+CloseBtn.Position = UDim2.new(1, -33, 0, 6)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
 CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -114,18 +111,16 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 5)
 closeCorner.Parent = CloseBtn
 
--- Левая панель с вкладками
 local Tabs = Instance.new("Frame")
-Tabs.Size = UDim2.new(0, 160, 1, -40)
+Tabs.Size = UDim2.new(0, 140, 1, -40)
 Tabs.Position = UDim2.new(0, 0, 0, 40)
 Tabs.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
 Tabs.BorderSizePixel = 0
 Tabs.Parent = MainFrame
 
--- Правая панель с настройками (скролл)
 local ContentArea = Instance.new("ScrollingFrame")
-ContentArea.Size = UDim2.new(1, -170, 1, -40)
-ContentArea.Position = UDim2.new(0, 170, 0, 40)
+ContentArea.Size = UDim2.new(1, -150, 1, -40)
+ContentArea.Position = UDim2.new(0, 150, 0, 40)
 ContentArea.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 ContentArea.BorderSizePixel = 0
 ContentArea.ScrollBarThickness = 4
@@ -150,14 +145,14 @@ local AllTabs = {}
 
 for i, name in ipairs(Sections) do
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 150, 0, 45)
-    btn.Position = UDim2.new(0, 5, 0, (i-1) * 50)
+    btn.Size = UDim2.new(0, 130, 0, 40)
+    btn.Position = UDim2.new(0, 5, 0, (i-1) * 45)
     btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
     btn.TextScaled = false
     btn.Font = Enum.Font.Code
-    btn.TextSize = 14
+    btn.TextSize = 13
     btn.BorderSizePixel = 1
     btn.BorderColor3 = Color3.fromRGB(30, 30, 30)
     btn.Parent = Tabs
@@ -168,8 +163,8 @@ for i, name in ipairs(Sections) do
     tabCorner.Parent = btn
 
     local icon = Instance.new("ImageLabel")
-    icon.Size = UDim2.new(0, 20, 0, 20)
-    icon.Position = UDim2.new(0, 8, 0.5, -10)
+    icon.Size = UDim2.new(0, 18, 0, 18)
+    icon.Position = UDim2.new(0, 8, 0.5, -9)
     icon.BackgroundTransparency = 1
     icon.Image = SectionIcons[name]
     icon.ImageColor3 = Color3.fromRGB(255, 255, 255)
@@ -177,15 +172,15 @@ for i, name in ipairs(Sections) do
     icon.Parent = btn
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -35, 1, 0)
-    label.Position = UDim2.new(0, 35, 0, 0)
+    label.Size = UDim2.new(1, -30, 1, 0)
+    label.Position = UDim2.new(0, 30, 0, 0)
     label.BackgroundTransparency = 1
     label.Text = name
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.TextScaled = false
     label.Font = Enum.Font.Code
-    label.TextSize = 14
+    label.TextSize = 13
     label.Parent = btn
 
     local content = Instance.new("Frame")
@@ -230,13 +225,13 @@ end
 
 local function CreateToggle(parent, label, path, yPos)
     local holder = Instance.new("Frame")
-    holder.Size = UDim2.new(1, 0, 0, 30)
+    holder.Size = UDim2.new(1, 0, 0, 28)
     holder.Position = UDim2.new(0, 10, 0, yPos)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
     
     local text = Instance.new("TextLabel")
-    text.Size = UDim2.new(0.6, 0, 1, 0)
+    text.Size = UDim2.new(0.45, 0, 1, 0)
     text.Position = UDim2.new(0, 0, 0, 0)
     text.BackgroundTransparency = 1
     text.Text = label
@@ -244,12 +239,12 @@ local function CreateToggle(parent, label, path, yPos)
     text.TextXAlignment = Enum.TextXAlignment.Left
     text.TextScaled = false
     text.Font = Enum.Font.Code
-    text.TextSize = 13
+    text.TextSize = 12
     text.Parent = holder
     
     local toggle = Instance.new("Frame")
-    toggle.Size = UDim2.new(0, 40, 0, 20)
-    toggle.Position = UDim2.new(0.75, 0, 0.2, 0)
+    toggle.Size = UDim2.new(0, 36, 0, 18)
+    toggle.Position = UDim2.new(0.82, 0, 0.2, 0)
     toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     toggle.BorderSizePixel = 1
     toggle.BorderColor3 = Color3.fromRGB(100, 100, 100)
@@ -260,7 +255,7 @@ local function CreateToggle(parent, label, path, yPos)
     toggleCorner.Parent = toggle
     
     local check = Instance.new("Frame")
-    check.Size = UDim2.new(0, 16, 0, 16)
+    check.Size = UDim2.new(0, 14, 0, 14)
     check.Position = UDim2.new(0, 2, 0, 2)
     check.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
     check.BorderSizePixel = 0
@@ -275,7 +270,7 @@ local function CreateToggle(parent, label, path, yPos)
         for _, v in ipairs(path) do current = current[v] end
         if current then
             check.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            TweenService:Create(check, TweenInfo.new(0.15), {Position = UDim2.new(0, 22, 0, 2)}):Play()
+            TweenService:Create(check, TweenInfo.new(0.15), {Position = UDim2.new(0, 20, 0, 2)}):Play()
         else
             check.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
             TweenService:Create(check, TweenInfo.new(0.15), {Position = UDim2.new(0, 2, 0, 2)}):Play()
@@ -307,13 +302,13 @@ end
 
 local function CreateSlider(parent, label, path, min, max, decimal, yPos)
     local holder = Instance.new("Frame")
-    holder.Size = UDim2.new(1, 0, 0, 30)
+    holder.Size = UDim2.new(1, 0, 0, 28)
     holder.Position = UDim2.new(0, 10, 0, yPos)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
     
     local text = Instance.new("TextLabel")
-    text.Size = UDim2.new(0.4, 0, 1, 0)
+    text.Size = UDim2.new(0.35, 0, 1, 0)
     text.Position = UDim2.new(0, 0, 0, 0)
     text.BackgroundTransparency = 1
     text.Text = label
@@ -321,22 +316,22 @@ local function CreateSlider(parent, label, path, min, max, decimal, yPos)
     text.TextXAlignment = Enum.TextXAlignment.Left
     text.TextScaled = false
     text.Font = Enum.Font.Code
-    text.TextSize = 13
+    text.TextSize = 12
     text.Parent = holder
     
     local val = Instance.new("TextLabel")
-    val.Size = UDim2.new(0.15, 0, 1, 0)
-    val.Position = UDim2.new(0.45, 0, 0, 0)
+    val.Size = UDim2.new(0.12, 0, 1, 0)
+    val.Position = UDim2.new(0.48, 0, 0, 0)
     val.BackgroundTransparency = 1
     val.Text = "0"
     val.TextColor3 = Color3.fromRGB(255, 255, 255)
     val.TextScaled = false
     val.Font = Enum.Font.Code
-    val.TextSize = 13
+    val.TextSize = 12
     val.Parent = holder
     
     local slider = Instance.new("Frame")
-    slider.Size = UDim2.new(0.25, 0, 0.2, 0)
+    slider.Size = UDim2.new(0.3, 0, 0.2, 0)
     slider.Position = UDim2.new(0.65, 0, 0.4, 0)
     slider.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     slider.BorderSizePixel = 1
@@ -406,92 +401,91 @@ end
 -- Наполнение вкладок
 local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
-CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"}, 30)
-CreateSlider(aimPanel, "FOV", {"AimBot","FOV"}, 1, 180, false, 60)
-CreateSlider(aimPanel, "Smooth", {"AimBot","Smooth"}, 0, 1, true, 90)
-CreateSlider(aimPanel, "Range", {"AimBot","Range"}, 1, 50, false, 120)
-aimPanel.Size = UDim2.new(1, -10, 0, 150)
+CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"}, 28)
+CreateSlider(aimPanel, "FOV", {"AimBot","FOV"}, 1, 180, false, 56)
+CreateSlider(aimPanel, "Smooth", {"AimBot","Smooth"}, 0, 1, true, 84)
+CreateSlider(aimPanel, "Range", {"AimBot","Range"}, 1, 50, false, 112)
+aimPanel.Size = UDim2.new(1, -10, 0, 140)
 
 local silentPanel = CreateSettingPanel(CombatTab, "Silent Aim")
-CreateToggle(silentPanel, "Enable", {"Silent","Enabled"}, 30)
-CreateSlider(silentPanel, "FOV", {"Silent","FOV"}, 1, 180, false, 60)
-CreateSlider(silentPanel, "Range", {"Silent","Range"}, 1, 50, false, 90)
-silentPanel.Size = UDim2.new(1, -10, 0, 120)
-silentPanel.Position = UDim2.new(0, 5, 0, 160)
+CreateToggle(silentPanel, "Enable", {"Silent","Enabled"}, 28)
+CreateSlider(silentPanel, "FOV", {"Silent","FOV"}, 1, 180, false, 56)
+CreateSlider(silentPanel, "Range", {"Silent","Range"}, 1, 50, false, 84)
+silentPanel.Size = UDim2.new(1, -10, 0, 112)
+silentPanel.Position = UDim2.new(0, 5, 0, 150)
 
 local triggerPanel = CreateSettingPanel(CombatTab, "Trigger")
-CreateToggle(triggerPanel, "Enable", {"Trigger","Enabled"}, 30)
-CreateSlider(triggerPanel, "FOV", {"Trigger","FOV"}, 1, 180, false, 60)
-CreateSlider(triggerPanel, "Range", {"Trigger","Range"}, 1, 50, false, 90)
-CreateSlider(triggerPanel, "Delay", {"Trigger","Delay"}, 10, 500, false, 120)
-triggerPanel.Size = UDim2.new(1, -10, 0, 150)
-triggerPanel.Position = UDim2.new(0, 5, 0, 290)
+CreateToggle(triggerPanel, "Enable", {"Trigger","Enabled"}, 28)
+CreateSlider(triggerPanel, "FOV", {"Trigger","FOV"}, 1, 180, false, 56)
+CreateSlider(triggerPanel, "Range", {"Trigger","Range"}, 1, 50, false, 84)
+CreateSlider(triggerPanel, "Delay", {"Trigger","Delay"}, 10, 500, false, 112)
+triggerPanel.Size = UDim2.new(1, -10, 0, 140)
+triggerPanel.Position = UDim2.new(0, 5, 0, 270)
 
 local VisualsTab = AllTabs["Visuals"]
 local espPanel = CreateSettingPanel(VisualsTab, "ESP")
-CreateToggle(espPanel, "Enable", {"ESP","Enabled"}, 30)
-CreateToggle(espPanel, "Box", {"ESP","Box"}, 60)
-CreateToggle(espPanel, "Name", {"ESP","Name"}, 90)
-CreateToggle(espPanel, "Health", {"ESP","Health"}, 120)
-CreateToggle(espPanel, "Distance", {"ESP","Distance"}, 150)
-CreateToggle(espPanel, "Skeleton", {"ESP","Skeleton"}, 180)
-CreateToggle(espPanel, "Trail", {"ESP","Trail"}, 210)
-CreateToggle(espPanel, "Highlight", {"ESP","Highlight"}, 240)
-espPanel.Size = UDim2.new(1, -10, 0, 270)
+CreateToggle(espPanel, "Enable", {"ESP","Enabled"}, 28)
+CreateToggle(espPanel, "Box", {"ESP","Box"}, 56)
+CreateToggle(espPanel, "Name", {"ESP","Name"}, 84)
+CreateToggle(espPanel, "Health", {"ESP","Health"}, 112)
+CreateToggle(espPanel, "Distance", {"ESP","Distance"}, 140)
+CreateToggle(espPanel, "Skeleton", {"ESP","Skeleton"}, 168)
+CreateToggle(espPanel, "Trail", {"ESP","Trail"}, 196)
+CreateToggle(espPanel, "Highlight", {"ESP","Highlight"}, 224)
+espPanel.Size = UDim2.new(1, -10, 0, 252)
 
 local chamsPanel = CreateSettingPanel(VisualsTab, "Chams")
-CreateToggle(chamsPanel, "Enable", {"Chams","Enabled"}, 30)
-CreateSlider(chamsPanel, "Transparency", {"Chams","Transparency"}, 0, 1, true, 60)
-chamsPanel.Size = UDim2.new(1, -10, 0, 90)
-chamsPanel.Position = UDim2.new(0, 5, 0, 280)
+CreateToggle(chamsPanel, "Enable", {"Chams","Enabled"}, 28)
+CreateSlider(chamsPanel, "Transparency", {"Chams","Transparency"}, 0, 1, true, 56)
+chamsPanel.Size = UDim2.new(1, -10, 0, 84)
+chamsPanel.Position = UDim2.new(0, 5, 0, 262)
 
 local fovPanel = CreateSettingPanel(VisualsTab, "FOV Circle")
-CreateToggle(fovPanel, "Show", {"FOVCircle","Enabled"}, 30)
-fovPanel.Size = UDim2.new(1, -10, 0, 60)
-fovPanel.Position = UDim2.new(0, 5, 0, 380)
+CreateToggle(fovPanel, "Show", {"FOVCircle","Enabled"}, 28)
+fovPanel.Size = UDim2.new(1, -10, 0, 56)
+fovPanel.Position = UDim2.new(0, 5, 0, 356)
 
 local worldPanel = CreateSettingPanel(VisualsTab, "World")
-CreateToggle(worldPanel, "Fog", {"World","Fog","Enabled"}, 30)
-CreateSlider(worldPanel, "Fog Density", {"World","Fog","Density"}, 0, 1, true, 60)
-CreateToggle(worldPanel, "Sky", {"World","Sky","Enabled"}, 90)
-CreateToggle(worldPanel, "Ambient", {"World","Ambient","Enabled"}, 120)
-worldPanel.Size = UDim2.new(1, -10, 0, 150)
-worldPanel.Position = UDim2.new(0, 5, 0, 450)
+CreateToggle(worldPanel, "Fog", {"World","Fog","Enabled"}, 28)
+CreateSlider(worldPanel, "Fog Density", {"World","Fog","Density"}, 0, 1, true, 56)
+CreateToggle(worldPanel, "Sky", {"World","Sky","Enabled"}, 84)
+CreateToggle(worldPanel, "Ambient", {"World","Ambient","Enabled"}, 112)
+worldPanel.Size = UDim2.new(1, -10, 0, 140)
+worldPanel.Position = UDim2.new(0, 5, 0, 422)
 
 local MovementTab = AllTabs["Movement"]
 local speedPanel = CreateSettingPanel(MovementTab, "Speed")
-CreateToggle(speedPanel, "Enable", {"Speed","Enabled"}, 30)
-CreateSlider(speedPanel, "Speed", {"Speed","Speed"}, 10, 200, false, 60)
-speedPanel.Size = UDim2.new(1, -10, 0, 90)
+CreateToggle(speedPanel, "Enable", {"Speed","Enabled"}, 28)
+CreateSlider(speedPanel, "Speed", {"Speed","Speed"}, 10, 200, false, 56)
+speedPanel.Size = UDim2.new(1, -10, 0, 84)
 
 local flyPanel = CreateSettingPanel(MovementTab, "Fly")
-CreateToggle(flyPanel, "Enable", {"Fly","Enabled"}, 30)
-CreateSlider(flyPanel, "Speed", {"Fly","Speed"}, 10, 200, false, 60)
-flyPanel.Size = UDim2.new(1, -10, 0, 90)
-flyPanel.Position = UDim2.new(0, 5, 0, 100)
+CreateToggle(flyPanel, "Enable", {"Fly","Enabled"}, 28)
+CreateSlider(flyPanel, "Speed", {"Fly","Speed"}, 10, 200, false, 56)
+flyPanel.Size = UDim2.new(1, -10, 0, 84)
+flyPanel.Position = UDim2.new(0, 5, 0, 94)
 
 local bhopPanel = CreateSettingPanel(MovementTab, "Bunny Hop")
-CreateToggle(bhopPanel, "Enable", {"BunnyHop","Enabled"}, 30)
-bhopPanel.Size = UDim2.new(1, -10, 0, 60)
-bhopPanel.Position = UDim2.new(0, 5, 0, 200)
+CreateToggle(bhopPanel, "Enable", {"BunnyHop","Enabled"}, 28)
+bhopPanel.Size = UDim2.new(1, -10, 0, 56)
+bhopPanel.Position = UDim2.new(0, 5, 0, 188)
 
 local MiscTab = AllTabs["Misc"]
 local antiAimPanel = CreateSettingPanel(MiscTab, "Anti-Aim")
-CreateToggle(antiAimPanel, "Enable", {"AntiAim","Enabled"}, 30)
-CreateToggle(antiAimPanel, "Head Down", {"AntiAim","HeadDown"}, 60)
-antiAimPanel.Size = UDim2.new(1, -10, 0, 90)
+CreateToggle(antiAimPanel, "Enable", {"AntiAim","Enabled"}, 28)
+CreateToggle(antiAimPanel, "Head Down", {"AntiAim","HeadDown"}, 56)
+antiAimPanel.Size = UDim2.new(1, -10, 0, 84)
 
 local watermarkPanel = CreateSettingPanel(MiscTab, "Watermark")
-CreateToggle(watermarkPanel, "Enable", {"Watermark","Enabled"}, 30)
-watermarkPanel.Size = UDim2.new(1, -10, 0, 60)
-watermarkPanel.Position = UDim2.new(0, 5, 0, 100)
+CreateToggle(watermarkPanel, "Enable", {"Watermark","Enabled"}, 28)
+watermarkPanel.Size = UDim2.new(1, -10, 0, 56)
+watermarkPanel.Position = UDim2.new(0, 5, 0, 94)
 
 local speedIndPanel = CreateSettingPanel(MiscTab, "Speed Indicator")
-CreateToggle(speedIndPanel, "Enable", {"SpeedIndicator","Enabled"}, 30)
-speedIndPanel.Size = UDim2.new(1, -10, 0, 60)
-speedIndPanel.Position = UDim2.new(0, 5, 0, 170)
+CreateToggle(speedIndPanel, "Enable", {"SpeedIndicator","Enabled"}, 28)
+speedIndPanel.Size = UDim2.new(1, -10, 0, 56)
+speedIndPanel.Position = UDim2.new(0, 5, 0, 160)
 
--- Функция переключения вкладок
 local function SwitchTab(name)
     for _, tab in pairs(AllTabs) do
         tab.Visible = false
@@ -512,7 +506,6 @@ for name, btn in pairs(TabButtons) do
 end
 SwitchTab("Combat")
 
--- FOV через Drawing (работает на мобильных)
 local FOVCircle = nil
 function CreateFOVCircle()
     if FOVCircle then FOVCircle:Remove() end
@@ -527,7 +520,6 @@ end
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
 
--- ESP из файла (с 2D боксами, именем, скелетом, трейлом, хайлайтом)
 local default = {
     ["2dbox"] = { color = Color3.fromRGB(255, 255, 255), enable = true },
     ["name"] = { enable = true, placement = "Top" },
@@ -715,7 +707,10 @@ local function updateBoxESP(v)
             local hrpPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
             if headOnScreen and footOnScreen and onScreen then
                 local scaleFactor = 1000 / hrpPos.Z
-                local width = hrp.Size.X * scaleFactor * boxScaleFactor * 1.1 * 1.2  
+                local char = v.Character
+                local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+                local charWidth = torso and torso.Size.X or 2
+                local width = charWidth * scaleFactor * 1.2
                 local height = (headPos.Y - footPos.Y) * 1.1
                 local centerX = hrpPos.X
                 local centerY = (headPos.Y + footPos.Y) / 2
@@ -916,7 +911,6 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
--- Функции ESP, Chams, Fly, Speed, AntiAim
 function EnableESP()
     ESPActive = true
     for _, player in ipairs(Players:GetPlayers()) do
@@ -1012,7 +1006,6 @@ function DisableAntiAim()
     AntiAimActive = false
 end
 
--- Перетаскивание кнопки H с обработкой клика
 local isDragging = false
 local dragStart = Vector2.new()
 local dragOffset = Vector2.new()
@@ -1064,7 +1057,6 @@ CloseBtn.TouchTap:Connect(function()
     if FOVCircle then FOVCircle.Visible = false end
 end)
 
--- Silent Aim (наведение камеры)
 local function GetClosestPlayerForAim()
     local closest = nil
     local shortest = Config.AimBot.Range
@@ -1130,7 +1122,6 @@ end
 
 local triggerDelay = 0
 
--- Отрисовка стрелок и полосок
 local function UpdateIndicators()
     for _, obj in pairs(IndicatorObjects) do obj:Destroy() end
     IndicatorObjects = {}
@@ -1191,7 +1182,6 @@ local function UpdateDistanceLines()
     end
 end
 
--- Главный цикл
 RunService.Heartbeat:Connect(function()
     local currentTick = tick()
     if currentTick - LastFrameTime > 0 then
@@ -1215,14 +1205,12 @@ RunService.RenderStepped:Connect(function()
         if target and target.Character then
             local aimPart = target.Character:FindFirstChild(Config.AimBot.AimPart) or target.Character:FindFirstChild("Head")
             if aimPart then
+                -- Мгновенное наведение (100% попадание)
                 local pos = Camera:WorldToViewportPoint(aimPart.Position)
                 local current = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                local targetPos = Vector2.new(pos.X, pos.Y)
-                local diff = targetPos - current
-                if diff.Magnitude > 5 then
-                    local smooth = Config.AimBot.Smooth
-                    local newPos = current + diff * (1 - smooth)
-                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, Camera:ScreenToWorldPoint(Vector3.new(newPos.X, newPos.Y, pos.Z)))
+                local dist = (Vector2.new(pos.X, pos.Y) - current).Magnitude
+                if dist < Config.AimBot.FOV then
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
                 end
             end
         end
