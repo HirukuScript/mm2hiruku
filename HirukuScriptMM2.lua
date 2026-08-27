@@ -19,7 +19,12 @@ local Config = {
     AntiAim = {Enabled = false, Mode = "Jitter", SpinSpeed = 90, HeadDown = false},
     Watermark = {Enabled = true},
     FOVCircle = {Enabled = true},
-    SpeedIndicator = {Enabled = true}
+    SpeedIndicator = {Enabled = true},
+    World = {
+        Fog = {Enabled = false, Color = Color3.fromRGB(255,255,255), Density = 0.5},
+        Sky = {Enabled = false, Color = Color3.fromRGB(135,206,235)},
+        Ambient = {Enabled = false, Color = Color3.fromRGB(128,128,128)}
+    }
 }
 
 local MenuOpen = false
@@ -42,49 +47,45 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HirukuInternal"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
+-- Кнопка H (открытие и перетаскивание)
 local CircleButton = Instance.new("TextButton")
 CircleButton.Size = UDim2.new(0, 60, 0, 60)
 CircleButton.Position = UDim2.new(0.02, 0, 0.5, -30)
 CircleButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-CircleButton.Text = ""
+CircleButton.Text = "H"
+CircleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CircleButton.TextScaled = true
+CircleButton.Font = Enum.Font.Code
+CircleButton.BorderSizePixel = 2
+CircleButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
 CircleButton.AutoButtonColor = false
+CircleButton.ZIndex = 100
 CircleButton.Parent = ScreenGui
 
 local circleCorner = Instance.new("UICorner")
 circleCorner.CornerRadius = UDim.new(1, 0)
 circleCorner.Parent = CircleButton
 
-local CircleStroke = Instance.new("UIStroke")
-CircleStroke.Thickness = 2
-CircleStroke.Color = Color3.fromRGB(255, 255, 255)
-CircleStroke.Parent = CircleButton
-
-local CircleText = Instance.new("TextLabel")
-CircleText.Size = UDim2.new(1, 0, 1, 0)
-CircleText.BackgroundTransparency = 1
-CircleText.Text = "H"
-CircleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-CircleText.TextScaled = true
-CircleText.Font = Enum.Font.Code
-CircleText.Parent = CircleButton
-
 TweenService:Create(CircleButton, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Size = UDim2.new(0, 62, 0, 62)}):Play()
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 400, 0, 350)
-MainFrame.Position = UDim2.new(0.5, -200, 0.5, -175)
+MainFrame.Size = UDim2.new(0, 450, 0, 400)
+MainFrame.Position = UDim2.new(0.5, -225, 0.5, -200)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 1
 MainFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
 MainFrame.Visible = false
+MainFrame.ZIndex = 50
 MainFrame.Parent = ScreenGui
 
 local mainCorner = Instance.new("UICorner")
 mainCorner.CornerRadius = UDim.new(0, 8)
 mainCorner.Parent = MainFrame
 
+-- Заголовок и перетаскивание меню
 local TitleBar = Instance.new("TextButton")
 TitleBar.Size = UDim2.new(1, 0, 0, 35)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -120,15 +121,15 @@ closeCorner.CornerRadius = UDim.new(0, 5)
 closeCorner.Parent = CloseBtn
 
 local Tabs = Instance.new("Frame")
-Tabs.Size = UDim2.new(0, 90, 1, -35)
+Tabs.Size = UDim2.new(0, 100, 1, -35)
 Tabs.Position = UDim2.new(0, 0, 0, 35)
 Tabs.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
 Tabs.BorderSizePixel = 0
 Tabs.Parent = MainFrame
 
 local ContentArea = Instance.new("ScrollingFrame")
-ContentArea.Size = UDim2.new(1, -100, 1, -35)
-ContentArea.Position = UDim2.new(0, 100, 0, 35)
+ContentArea.Size = UDim2.new(1, -110, 1, -35)
+ContentArea.Position = UDim2.new(0, 110, 0, 35)
 ContentArea.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 ContentArea.BorderSizePixel = 0
 ContentArea.ScrollBarThickness = 3
@@ -147,7 +148,7 @@ local AllTabs = {}
 
 for i, name in ipairs(Sections) do
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 80, 0, 35)
+    btn.Size = UDim2.new(0, 90, 0, 35)
     btn.Position = UDim2.new(0, 5, 0, (i-1) * 40)
     btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     btn.Text = name
@@ -170,13 +171,14 @@ for i, name in ipairs(Sections) do
     content.Visible = false
     content.Parent = ContentArea
     AllTabs[name] = content
-    
+
     local contentLayout = Instance.new("UIListLayout")
     contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
     contentLayout.Padding = UDim.new(0, 6)
     contentLayout.Parent = content
 end
 
+-- Функции создания UI карточек
 local function CreateSettingPanel(parent, title)
     local panel = Instance.new("Frame")
     panel.Size = UDim2.new(1, -10, 0, 30)
@@ -184,11 +186,11 @@ local function CreateSettingPanel(parent, title)
     panel.BorderSizePixel = 1
     panel.BorderColor3 = Color3.fromRGB(30, 30, 30)
     panel.Parent = parent
-    
+
     local panelCorner = Instance.new("UICorner")
     panelCorner.CornerRadius = UDim.new(0, 5)
     panelCorner.Parent = panel
-    
+
     local header = Instance.new("TextLabel")
     header.Size = UDim2.new(1, 0, 0, 25)
     header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -200,16 +202,16 @@ local function CreateSettingPanel(parent, title)
     header.TextSize = 13
     header.BorderSizePixel = 0
     header.Parent = panel
-    
+
     local headerCorner = Instance.new("UICorner")
     headerCorner.CornerRadius = UDim.new(0, 5)
     headerCorner.Parent = header
-    
+
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Padding = UDim.new(0, 4)
     layout.Parent = panel
-    
+
     return panel
 end
 
@@ -218,7 +220,7 @@ local function CreateToggle(parent, label, path)
     holder.Size = UDim2.new(1, -10, 0, 30)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
-    
+
     local text = Instance.new("TextLabel")
     text.Size = UDim2.new(0.6, 0, 1, 0)
     text.Position = UDim2.new(0, 0, 0, 0)
@@ -230,7 +232,7 @@ local function CreateToggle(parent, label, path)
     text.Font = Enum.Font.Code
     text.TextSize = 12
     text.Parent = holder
-    
+
     local toggle = Instance.new("Frame")
     toggle.Size = UDim2.new(0, 30, 0, 16)
     toggle.Position = UDim2.new(0.8, 0, 0.2, 0)
@@ -238,22 +240,22 @@ local function CreateToggle(parent, label, path)
     toggle.BorderSizePixel = 1
     toggle.BorderColor3 = Color3.fromRGB(100, 100, 100)
     toggle.Parent = holder
-    
+
     local toggleCorner = Instance.new("UICorner")
     toggleCorner.CornerRadius = UDim.new(1, 0)
     toggleCorner.Parent = toggle
-    
+
     local check = Instance.new("Frame")
     check.Size = UDim2.new(0, 12, 0, 12)
     check.Position = UDim2.new(0, 2, 0, 2)
     check.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
     check.BorderSizePixel = 0
     check.Parent = toggle
-    
+
     local checkCorner = Instance.new("UICorner")
     checkCorner.CornerRadius = UDim.new(1, 0)
     checkCorner.Parent = check
-    
+
     local function UpdateToggle()
         local current = Config
         for _, v in ipairs(path) do current = current[v] end
@@ -266,7 +268,7 @@ local function CreateToggle(parent, label, path)
         end
     end
     UpdateToggle()
-    
+
     toggle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local current = Config
@@ -293,7 +295,7 @@ local function CreateSlider(parent, label, path, min, max, decimal)
     holder.Size = UDim2.new(1, -10, 0, 45)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
-    
+
     local text = Instance.new("TextLabel")
     text.Size = UDim2.new(0.5, 0, 0, 20)
     text.Position = UDim2.new(0, 0, 0, 0)
@@ -305,7 +307,7 @@ local function CreateSlider(parent, label, path, min, max, decimal)
     text.Font = Enum.Font.Code
     text.TextSize = 12
     text.Parent = holder
-    
+
     local val = Instance.new("TextLabel")
     val.Size = UDim2.new(0.2, 0, 0, 20)
     val.Position = UDim2.new(0.5, 0, 0, 0)
@@ -316,7 +318,7 @@ local function CreateSlider(parent, label, path, min, max, decimal)
     val.Font = Enum.Font.Code
     val.TextSize = 12
     val.Parent = holder
-    
+
     local slider = Instance.new("Frame")
     slider.Size = UDim2.new(0.9, 0, 0.2, 0)
     slider.Position = UDim2.new(0, 0, 0.5, 0)
@@ -324,21 +326,21 @@ local function CreateSlider(parent, label, path, min, max, decimal)
     slider.BorderSizePixel = 1
     slider.BorderColor3 = Color3.fromRGB(100, 100, 100)
     slider.Parent = holder
-    
+
     local sliderCorner = Instance.new("UICorner")
     sliderCorner.CornerRadius = UDim.new(1, 0)
     sliderCorner.Parent = slider
-    
+
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(0.5, 0, 1, 0)
     fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     fill.BorderSizePixel = 0
     fill.Parent = slider
-    
+
     local fillCorner = Instance.new("UICorner")
     fillCorner.CornerRadius = UDim.new(1, 0)
     fillCorner.Parent = fill
-    
+
     local function UpdateSlider()
         local current = Config
         for _, v in ipairs(path) do current = current[v] end
@@ -351,7 +353,7 @@ local function CreateSlider(parent, label, path, min, max, decimal)
         end
     end
     UpdateSlider()
-    
+
     local dragging = false
     slider.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -390,7 +392,7 @@ local function CreateColorButton(parent, label, path, colorList)
     holder.Size = UDim2.new(1, -10, 0, 40)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
-    
+
     local text = Instance.new("TextLabel")
     text.Size = UDim2.new(0.8, 0, 0, 20)
     text.Position = UDim2.new(0, 0, 0, 0)
@@ -402,15 +404,15 @@ local function CreateColorButton(parent, label, path, colorList)
     text.Font = Enum.Font.Code
     text.TextSize = 12
     text.Parent = holder
-    
+
     local btnHolder = Instance.new("Frame")
     btnHolder.Size = UDim2.new(1, 0, 0, 20)
     btnHolder.Position = UDim2.new(0, 0, 0, 20)
     btnHolder.BackgroundTransparency = 1
     btnHolder.Parent = holder
-    
+
     local colorBtns = {}
-    
+
     for idx, color in ipairs(colorList) do
         local btn = Instance.new("Frame")
         btn.Size = UDim2.new(0, 18, 0, 18)
@@ -419,19 +421,19 @@ local function CreateColorButton(parent, label, path, colorList)
         btn.BorderSizePixel = 1
         btn.BorderColor3 = Color3.fromRGB(60, 60, 60)
         btn.Parent = btnHolder
-        
+
         local btnCorner = Instance.new("UICorner")
         btnCorner.CornerRadius = UDim.new(0, 3)
         btnCorner.Parent = btn
-        
+
         table.insert(colorBtns, btn)
-        
+
         btn.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 local current = Config
                 for i = 1, #path - 1 do current = current[path[i]] end
                 current[path[#path]] = color
-                
+
                 for _, b in ipairs(colorBtns) do
                     if b.BackgroundColor3 == color then
                         b.BorderColor3 = Color3.fromRGB(255, 255, 255)
@@ -441,7 +443,7 @@ local function CreateColorButton(parent, label, path, colorList)
                         b.BorderSizePixel = 1
                     end
                 end
-                
+
                 if path[1] == "AimBot" and path[2] == "Color" then CreateFOVCircle() end
                 if path[1] == "Silent" and path[2] == "Color" then CreateFOVCircle() end
                 if path[1] == "Chams" and path[2] == "FillColor" then EnableChams() end
@@ -449,7 +451,7 @@ local function CreateColorButton(parent, label, path, colorList)
             end
         end)
     end
-    
+
     local current = Config
     for _, v in ipairs(path) do current = current[v] end
     for _, b in ipairs(colorBtns) do
@@ -460,6 +462,7 @@ local function CreateColorButton(parent, label, path, colorList)
     end
 end
 
+-- Наполнение вкладок
 local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
 CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"})
@@ -578,6 +581,7 @@ end
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
 
+-- Универсальные функции для любых моделей
 local function FindTorso(char)
     return char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("LowerTorso") or char:FindFirstChild("HumanoidRootPart")
 end
@@ -586,21 +590,22 @@ local function FindHead(char)
     return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart")
 end
 
+-- ESP и Chams
 local function CreateESPForPlayer(player)
-    if ESPActive then return end
+    if not ESPActive then return end
     local char = player.Character
     if not char then return end
-    
+
     local torso = FindTorso(char)
     local head = FindHead(char)
     local hrp = char:FindFirstChild("HumanoidRootPart") or torso
     if not hrp then return end
-    
+
     local espFolder = Instance.new("Folder")
     espFolder.Name = "ESP_" .. player.Name
     espFolder.Parent = char
     table.insert(ESPObjects, espFolder)
-    
+
     if Config.ESP.Box then
         local box = Instance.new("BoxHandleAdornment")
         box.Size = Vector3.new(2, 5, 2)
@@ -612,14 +617,14 @@ local function CreateESPForPlayer(player)
         box.Parent = espFolder
         table.insert(ESPObjects, box)
     end
-    
+
     if Config.ESP.Name then
         local nameTag = Instance.new("BillboardGui")
         nameTag.Size = UDim2.new(0, 120, 0, 20)
         nameTag.Adornee = hrp
         nameTag.AlwaysOnTop = true
         nameTag.Parent = espFolder
-        
+
         local nameLabel = Instance.new("TextLabel")
         nameLabel.Size = UDim2.new(1,0,1,0)
         nameLabel.BackgroundTransparency = 1
@@ -630,7 +635,7 @@ local function CreateESPForPlayer(player)
         nameLabel.Parent = nameTag
         table.insert(ESPObjects, nameTag)
     end
-    
+
     if Config.ESP.Health then
         local healthTag = Instance.new("BillboardGui")
         healthTag.Size = UDim2.new(0, 100, 0, 20)
@@ -638,7 +643,7 @@ local function CreateESPForPlayer(player)
         healthTag.Adornee = hrp
         healthTag.AlwaysOnTop = true
         healthTag.Parent = espFolder
-        
+
         local healthLabel = Instance.new("TextLabel")
         healthLabel.Size = UDim2.new(1,0,1,0)
         healthLabel.BackgroundTransparency = 1
@@ -649,7 +654,7 @@ local function CreateESPForPlayer(player)
         healthLabel.Parent = healthTag
         table.insert(ESPObjects, healthTag)
     end
-    
+
     if Config.ESP.Distance then
         local distTag = Instance.new("BillboardGui")
         distTag.Size = UDim2.new(0, 80, 0, 20)
@@ -657,7 +662,7 @@ local function CreateESPForPlayer(player)
         distTag.Adornee = hrp
         distTag.AlwaysOnTop = true
         distTag.Parent = espFolder
-        
+
         local distLabel = Instance.new("TextLabel")
         distLabel.Size = UDim2.new(1,0,1,0)
         distLabel.BackgroundTransparency = 1
@@ -669,7 +674,7 @@ local function CreateESPForPlayer(player)
         distLabel.Parent = distTag
         table.insert(ESPObjects, distTag)
     end
-    
+
     if Config.ESP.Skeleton then
         DrawSkeletonForPlayer(char)
     end
@@ -683,7 +688,7 @@ local function DrawSkeletonForPlayer(char)
         {"Torso", "Left Leg"},
         {"Torso", "Right Leg"}
     }
-    
+
     for _, connection in ipairs(parts) do
         local part1 = char:FindFirstChild(connection[1]) or FindTorso(char)
         local part2 = char:FindFirstChild(connection[2]) or FindTorso(char)
@@ -691,11 +696,11 @@ local function DrawSkeletonForPlayer(char)
             local attachment1 = Instance.new("Attachment")
             attachment1.Position = Vector3.new(0,0,0)
             attachment1.Parent = part1
-            
+
             local attachment2 = Instance.new("Attachment")
             attachment2.Position = Vector3.new(0,0,0)
             attachment2.Parent = part2
-            
+
             local line = Instance.new("Beam")
             line.Attachment0 = attachment1
             line.Attachment1 = attachment2
@@ -818,6 +823,7 @@ function DisableAntiAim()
     AntiAimActive = false
 end
 
+-- Логика AimBot и Silent Aim
 local function GetClosestPlayerByDistance(range)
     local closest = nil
     local bestDist = range
@@ -892,7 +898,7 @@ RunService.Heartbeat:Connect(function()
         CurrentFPS = math.floor(1 / (currentTick - LastFrameTime))
         LastFrameTime = currentTick
     end
-    
+
     if Config.BunnyHop.Enabled then
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
             local char = LocalPlayer.Character
@@ -924,7 +930,7 @@ RunService.RenderStepped:Connect(function()
     elseif FOVCircle then
         FOVCircle.Visible = false
     end
-    
+
     if Config.AimBot.Enabled and not MenuOpen then
         local target = GetClosestPlayerByScreen(Config.AimBot.FOV)
         if not target then
@@ -941,7 +947,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
-    
+
     if Config.Trigger.Enabled and not MenuOpen then
         triggerDelay = triggerDelay + 1
         if triggerDelay >= Config.Trigger.Delay then
@@ -955,7 +961,7 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
-    
+
     if FlyActive and LocalPlayer.Character then
         local char = LocalPlayer.Character
         local hrp = char:FindFirstChild("HumanoidRootPart")
@@ -976,12 +982,12 @@ RunService.RenderStepped:Connect(function()
             humanoid.PlatformStand = true
         end
     end
-    
+
     if SpeedActive and LocalPlayer.Character then
         local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
         if humanoid then humanoid.WalkSpeed = Config.Speed.Speed end
     end
-    
+
     if AntiAimActive and LocalPlayer.Character then
         local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         local head = LocalPlayer.Character:FindFirstChild("Head")
@@ -997,6 +1003,29 @@ RunService.RenderStepped:Connect(function()
                 head.CFrame = head.CFrame * CFrame.Angles(math.rad(90), 0, 0)
             end
         end
+    end
+
+    if Config.World.Fog.Enabled then
+        Lighting.Fog = true
+        Lighting.FogColor = Config.World.Fog.Color
+        Lighting.FogEnd = 1000 / (Config.World.Fog.Density + 0.1)
+    else
+        Lighting.Fog = false
+    end
+
+    if Config.World.Sky.Enabled then
+        local sky = Lighting:FindFirstChild("Sky")
+        if sky then
+            for _, child in ipairs(sky:GetChildren()) do
+                if child:IsA("ImageLabel") then
+                    child.Color = Config.World.Sky.Color
+                end
+            end
+        end
+    end
+
+    if Config.World.Ambient.Enabled then
+        Lighting.Ambient = Config.World.Ambient.Color
     end
 end)
 
@@ -1046,6 +1075,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- Функции для кнопки и меню
 local isDraggingCircle = false
 local dragStartCircle = Vector2.new()
 local dragOffsetCircle = Vector2.new()
@@ -1064,3 +1094,78 @@ UserInputService.InputBegan:Connect(function(input)
         end
     end
 end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if isDraggingCircle and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+        local pos = Vector2.new(input.Position.X, input.Position.Y)
+        if (pos - dragStartCircle).Magnitude > 10 then
+            isClickCircle = false
+            CircleButton.Position = UDim2.new(0, pos.X - dragOffsetCircle.X, 0, pos.Y - dragOffsetCircle.Y)
+        end
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if isDraggingCircle then
+            if isClickCircle then
+                MenuOpen = not MenuOpen
+                MainFrame.Visible = MenuOpen
+                if MenuOpen then
+                    if Config.FOVCircle.Enabled then CreateFOVCircle() end
+                else
+                    if FOVCircle then FOVCircle.Visible = false end
+                end
+            end
+            isDraggingCircle = false
+        end
+    end
+end)
+
+local isDraggingTitle = false
+local dragOffsetTitle = Vector2.new()
+
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isDraggingTitle = true
+        dragOffsetTitle = Vector2.new(input.Position.X - MainFrame.AbsolutePosition.X, input.Position.Y - MainFrame.AbsolutePosition.Y)
+    end
+end)
+
+TitleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isDraggingTitle = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if isDraggingTitle and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+        MainFrame.Position = UDim2.new(0, input.Position.X - dragOffsetTitle.X, 0, input.Position.Y - dragOffsetTitle.Y)
+    end
+end)
+
+CloseBtn.MouseButton1Click:Connect(function()
+    MenuOpen = false
+    MainFrame.Visible = false
+    if FOVCircle then FOVCircle.Visible = false end
+end)
+
+CloseBtn.TouchTap:Connect(function()
+    MenuOpen = false
+    MainFrame.Visible = false
+    if FOVCircle then FOVCircle.Visible = false end
+end)
+
+-- Автоматическое обновление ESP/Chams на новых персонажах
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        player.CharacterAdded:Connect(function()
+            wait(0.5)
+            if ESPActive then CreateESPForPlayer(player) end
+            if ChamsActive then EnableChamsForPlayer(player) end
+        end)
+    end
+end
+
+if Config.FOVCircle.Enabled then CreateFOVCircle() end
+print("Hiruku Internal Loaded! Press H to open menu")
