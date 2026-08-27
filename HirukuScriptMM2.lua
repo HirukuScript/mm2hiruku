@@ -6,17 +6,16 @@ local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
 
 local Config = {
-    AimBot = {Enabled = false, FOV = 35, Thickness = 2, Color = Color3.fromRGB(255,255,255), AimPart = "Head", Range = 15, Mode = "Camera"},
-    Silent = {Enabled = false, FOV = 35, Range = 15, AimPart = "Head", Mode = "Remote"},
-    Trigger = {Enabled = false, FOV = 35, Range = 20, Delay = 50},
+    AimBot = {Enabled = false, FOV = 35, Thickness = 2, Color = Color3.fromRGB(255,255,255), AimPart = "Head", Range = 50, Mode = "Camera"},
+    Silent = {Enabled = false, FOV = 35, Range = 50, AimPart = "Head"},
+    Trigger = {Enabled = false, FOV = 35, Range = 35, Delay = 50},
     Chams = {Enabled = false, Transparency = 0.3, FillColor = Color3.fromRGB(255,255,255), OutlineColor = Color3.fromRGB(0,0,0)},
     ESP = {Enabled = false, Box = true, Name = true, Health = true, Distance = true, Skeleton = false},
-    BunnyHop = {Enabled = false},
+    BunnyHop = {Enabled = false, IncreaseSpeed = true, MaxSpeed = 100},
     Speed = {Enabled = false, Speed = 50},
-    Fly = {Enabled = false, Speed = 50},
+    Fly = {Enabled = false, Speed = 50, HeightOffset = 10},
     AntiAim = {Enabled = false, Mode = "Jitter", SpinSpeed = 90, HeadDown = false},
     Watermark = {Enabled = true},
     FOVCircle = {Enabled = true},
@@ -36,7 +35,8 @@ local ESPObjects = {}
 local ChamsObjects = {}
 local IndicatorObjects = {}
 local DistanceLines = {}
-local ActiveColorButtons = {}
+local BhopSpeed = 16
+local LastBhopTime = 0
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HirukuInternal"
@@ -464,14 +464,14 @@ local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
 CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"})
 CreateSlider(aimPanel, "FOV", {"AimBot","FOV"}, 1, 180, false)
-CreateSlider(aimPanel, "Range", {"AimBot","Range"}, 1, 50, false)
+CreateSlider(aimPanel, "Range", {"AimBot","Range"}, 1, 100, false)
 CreateColorButton(aimPanel, "Color", {"AimBot","Color"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)})
 aimPanel.Size = UDim2.new(1, -10, 0, 200)
 
 local silentPanel = CreateSettingPanel(CombatTab, "Silent Aim")
 CreateToggle(silentPanel, "Enable", {"Silent","Enabled"})
 CreateSlider(silentPanel, "FOV", {"Silent","FOV"}, 1, 180, false)
-CreateSlider(silentPanel, "Range", {"Silent","Range"}, 1, 50, false)
+CreateSlider(silentPanel, "Range", {"Silent","Range"}, 1, 100, false)
 CreateColorButton(silentPanel, "Color", {"Silent","Color"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)})
 silentPanel.Size = UDim2.new(1, -10, 0, 200)
 silentPanel.Position = UDim2.new(0, 5, 0, 210)
@@ -518,13 +518,16 @@ speedPanel.Size = UDim2.new(1, -10, 0, 100)
 local flyPanel = CreateSettingPanel(MovementTab, "Fly")
 CreateToggle(flyPanel, "Enable", {"Fly","Enabled"})
 CreateSlider(flyPanel, "Speed", {"Fly","Speed"}, 10, 200, false)
-flyPanel.Size = UDim2.new(1, -10, 0, 100)
+CreateSlider(flyPanel, "Height", {"Fly","HeightOffset"}, 1, 50, false)
+flyPanel.Size = UDim2.new(1, -10, 0, 140)
 flyPanel.Position = UDim2.new(0, 5, 0, 110)
 
 local bhopPanel = CreateSettingPanel(MovementTab, "Bunny Hop")
 CreateToggle(bhopPanel, "Enable", {"BunnyHop","Enabled"})
-bhopPanel.Size = UDim2.new(1, -10, 0, 60)
-bhopPanel.Position = UDim2.new(0, 5, 0, 220)
+CreateToggle(bhopPanel, "Increase", {"BunnyHop","IncreaseSpeed"})
+CreateSlider(bhopPanel, "Max Speed", {"BunnyHop","MaxSpeed"}, 16, 200, false)
+bhopPanel.Size = UDim2.new(1, -10, 0, 130)
+bhopPanel.Position = UDim2.new(0, 5, 0, 260)
 
 local MiscTab = AllTabs["Misc"]
 local antiAimPanel = CreateSettingPanel(MiscTab, "Anti-Aim")
@@ -575,338 +578,133 @@ end
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
 
-local default = {
-    ["2dbox"] = { color = Color3.fromRGB(255, 255, 255), enable = true },
-    ["name"] = { enable = true, placement = "Top" },
-    ["studs"] = { enable = true },
-    ["tool"] = { enable = true, placement = "Bottom" },
-    ["flags"] = { enable = true, placement = "Right" },
-    ["skeleton"] = { enable = true, color = Color3.new(1, 1, 1), outlineEnabled = true, outlineColor = Color3.new(0, 0, 0), lineThickness = 1, outlineThickness = 3 },
-    ["trail"] = { enable = true, rgb = Color3.fromRGB(255, 255, 255), thickness = 1 },
-    ["highlight"] = { enable = true, fillColor = Color3.fromRGB(128, 128, 128), outlineColor = Color3.fromRGB(0, 0, 0), fillTransparency = 0.5, outlineTransparency = 0 }
-}
-
-local boxCache = {}
-local stackingInfo = {}
-
-local function getdistancefc(part)
-    return (part.Position - Camera.CFrame.Position).Magnitude
+local function FindTorso(char)
+    return char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("LowerTorso") or char:FindFirstChild("HumanoidRootPart")
 end
 
-local function getMovementState(humanoid, hrp)
-    local velocity = hrp.Velocity
-    if velocity.Y > 1 then return "jumping" end
-    if velocity.Y < -1 then return "falling" end
-    local horizontalSpeed = math.sqrt(velocity.X^2 + velocity.Z^2)
-    if horizontalSpeed < 0.5 then return "idling" elseif horizontalSpeed <= 15 then return "walking" else return "running" end
+local function FindHead(char)
+    return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart")
 end
 
-local function getPosition(placement, boxPos, boxSize, userId, elementType)
-    if not stackingInfo[userId] then
-        stackingInfo[userId] = { Top = { count = 0, elements = {} }, Bottom = { count = 0, elements = {} }, Left = { count = 0, elements = {} }, Right = { count = 0, elements = {} } }
-    end
-    if not stackingInfo[userId][placement].elements[elementType] then
-        stackingInfo[userId][placement].count = stackingInfo[userId][placement].count + 1
-        stackingInfo[userId][placement].elements[elementType] = stackingInfo[userId][placement].count
-    end
-    local stackPosition = stackingInfo[userId][placement].elements[elementType]
-    local stackOffset = (stackPosition - 1) * 15
-    if placement == "Top" then return Vector2.new(boxPos.X + boxSize.X/2, boxPos.Y - 20 - stackOffset), true
-    elseif placement == "Bottom" then return Vector2.new(boxPos.X + boxSize.X/2, boxPos.Y + boxSize.Y + 10 + stackOffset), true
-    elseif placement == "Left" then return Vector2.new(boxPos.X - 10, boxPos.Y + boxSize.Y/2 + stackOffset), false
-    elseif placement == "Right" then return Vector2.new(boxPos.X + boxSize.X + 10, boxPos.Y + boxSize.Y/2 + stackOffset), false
-    else return Vector2.new(boxPos.X + boxSize.X/2, boxPos.Y - 20), true end
-end
-
-local function resetStackingInfo(userId)
-    stackingInfo[userId] = nil
-end
-
-local HeadOff = Vector3.new(0, 0.5, 0)
-local LegOff = Vector3.new(0, 3, 0)
-
-local function esp(p, cr)
-    local h = cr:WaitForChild("Humanoid")
-    local head = cr:WaitForChild("Head")
-    local text = Drawing.new("Text")
-    text.Visible = false
-    text.Outline = true
-    text.Font = 2
-    text.Color = Color3.fromRGB(255,255,255)
-    text.Size = 13
-    local c1, c2, c3
-    local function dc()
-        text.Visible = false
-        text:Remove()
-        resetStackingInfo(p.UserId)
-        if c1 then c1:Disconnect() end
-        if c2 then c2:Disconnect() end
-        if c3 then c3:Disconnect() end
-    end
-    c2 = cr.AncestryChanged:Connect(function(_, parent)
-        if not parent then dc() end
-    end)
-    c3 = h.HealthChanged:Connect(function(v)
-        if v <= 0 or h:GetState() == Enum.HumanoidStateType.Dead then dc() end
-    end)
-    c1 = RunService.RenderStepped:Connect(function()
-        if not boxCache[p.UserId] then return end
-        local boxPos = boxCache[p.UserId].Box.Position
-        local boxSize = boxCache[p.UserId].Box.Size
-        if boxCache[p.UserId].Box.Visible then
-            local pos, centered = getPosition(default.name.placement, boxPos, boxSize, p.UserId, "name")
-            text.Position = pos
-            text.Center = centered
-            text.Text = p.Name .. ' (' .. tostring(math.floor(getdistancefc(head))) .. ' studs)'
-            text.Visible = default.studs.enable and Config.ESP.Name
-        else
-            text.Visible = false
-        end
-    end)
-end
-
-local function flagsEsp(p, cr)
-    local h = cr:WaitForChild("Humanoid")
-    local hrp = cr:WaitForChild("HumanoidRootPart")
-    local text = Drawing.new("Text")
-    text.Visible = false
-    text.Outline = true
-    text.Font = 2
-    text.Color = Color3.fromRGB(255,255,255)
-    text.Size = 13
-    local c1, c2, c3
-    local function dc()
-        text.Visible = false
-        text:Remove()
-        if c1 then c1:Disconnect() end
-        if c2 then c2:Disconnect() end
-        if c3 then c3:Disconnect() end
-    end
-    c2 = cr.AncestryChanged:Connect(function(_, parent)
-        if not parent then dc() end
-    end)
-    c3 = h.HealthChanged:Connect(function(v)
-        if v <= 0 or h:GetState() == Enum.HumanoidStateType.Dead then dc() end
-    end)
-    c1 = RunService.RenderStepped:Connect(function()
-        if not boxCache[p.UserId] then return end
-        local boxPos = boxCache[p.UserId].Box.Position
-        local boxSize = boxCache[p.UserId].Box.Size
-        if boxCache[p.UserId].Box.Visible and Config.ESP.Box then
-            local movementState = getMovementState(h, hrp)
-            local pos, centered = getPosition(default.flags.placement, boxPos, boxSize, p.UserId, "flags")
-            text.Position = pos
-            text.Center = centered
-            text.Text = "[" .. movementState .. "]"
-            text.Visible = default.flags.enable and Config.ESP.Health
-        else
-            text.Visible = false
-        end
-    end)
-end
-
-local function updateBoxESP(v)
-    if not boxCache[v.UserId] then
-        boxCache[v.UserId] = {
-            BoxOutline = Drawing.new("Square"),
-            Box = Drawing.new("Square")
-        }
-        local BoxOutline = boxCache[v.UserId].BoxOutline
-        BoxOutline.Visible = false
-        BoxOutline.Color = Color3.new(0, 0, 0)
-        BoxOutline.Thickness = 3
-        BoxOutline.Transparency = 1
-        BoxOutline.Filled = false
-        local Box = boxCache[v.UserId].Box
-        Box.Visible = false
-        Box.Color = default["2dbox"].color
-        Box.Thickness = 1
-        Box.Transparency = 1
-        Box.Filled = false
-    end
-    
-    local connection
-    connection = RunService.RenderStepped:Connect(function()
-        if not v or not v.Character or 
-           not v.Character:FindFirstChild("Humanoid") or 
-           not v.Character:FindFirstChild("HumanoidRootPart") or 
-           v.Character.Humanoid.Health <= 0 then
-            if boxCache[v.UserId] then
-                boxCache[v.UserId].BoxOutline.Visible = false
-                boxCache[v.UserId].Box.Visible = false
-            end
-            if connection then connection:Disconnect() end
-            return
-        end
-        
-        local hrp = v.Character.HumanoidRootPart
-        local head = v.Character:FindFirstChild("Head")
-        if head then
-            local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position + HeadOff)
-            local footPos, footOnScreen = Camera:WorldToViewportPoint(hrp.Position - LegOff)
-            local hrpPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
-            if headOnScreen and footOnScreen and onScreen then
-                local scaleFactor = 1000 / hrpPos.Z
-                local width = 0.7 * scaleFactor * 1.2
-                local height = (headPos.Y - footPos.Y) * 1.1
-                local centerX = hrpPos.X
-                local centerY = (headPos.Y + footPos.Y) / 2
-                local BoxOutline = boxCache[v.UserId].BoxOutline
-                local Box = boxCache[v.UserId].Box
-                BoxOutline.Size = Vector2.new(width, height)
-                BoxOutline.Position = Vector2.new(centerX - width / 2, centerY - height / 2)
-                BoxOutline.Visible = default["2dbox"].enable and Config.ESP.Box
-                Box.Size = Vector2.new(width, height)
-                Box.Position = Vector2.new(centerX - width / 2, centerY - height / 2)
-                Box.Visible = default["2dbox"].enable and Config.ESP.Box
-                Box.Color = default["2dbox"].color
-            else
-                boxCache[v.UserId].BoxOutline.Visible = false
-                boxCache[v.UserId].Box.Visible = false
-            end
-        end
-    end)
-end
-
-local function createTrail(character)
-    if not Config.ESP.Trail then return end
-    local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
-    if not humanoidRootPart then return end
-    local attachment0 = Instance.new("Attachment")
-    attachment0.Position = Vector3.new(0, 0, 0)
-    attachment0.Parent = humanoidRootPart
-    local attachment1 = Instance.new("Attachment")
-    attachment1.Position = Vector3.new(0, 0, -0.5)
-    attachment1.Parent = humanoidRootPart
-    local trail = Instance.new("Trail")
-    trail.Attachment0 = attachment0
-    trail.Attachment1 = attachment1
-    trail.WidthScale = NumberSequence.new(default.trail.thickness)
-    trail.Color = ColorSequence.new(default.trail.rgb)
-    trail.Parent = humanoidRootPart
-    table.insert(ESPObjects, trail)
-end
-
-local function createHighlight(player)
-    if not Config.ESP.Highlight then return end
-    if not player.Character then return end
-    local highlight = Instance.new("Highlight")
-    highlight.FillColor = default.highlight.fillColor
-    highlight.OutlineColor = default.highlight.outlineColor
-    highlight.FillTransparency = default.highlight.fillTransparency
-    highlight.OutlineTransparency = default.highlight.outlineTransparency
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Enabled = default.highlight.enable
-    highlight.Parent = player.Character
-    table.insert(ESPObjects, highlight)
-end
-
-local R6_CONNECTIONS = {
-    {'Head', 'Torso'}, {'Torso', 'Left Arm'}, {'Torso', 'Right Arm'}, {'Torso', 'Left Leg'}, {'Torso', 'Right Leg'}
-}
-local R15_CONNECTIONS = {
-    {'Head', 'UpperTorso'}, {'UpperTorso', 'LowerTorso'}, {'UpperTorso', 'LeftUpperArm'}, {'UpperTorso', 'RightUpperArm'},
-    {'LeftUpperArm', 'LeftLowerArm'}, {'LeftLowerArm', 'LeftHand'}, {'RightUpperArm', 'RightLowerArm'}, {'RightLowerArm', 'RightHand'},
-    {'LowerTorso', 'LeftUpperLeg'}, {'LowerTorso', 'RightUpperLeg'}, {'LeftUpperLeg', 'LeftLowerLeg'}, {'LeftLowerLeg', 'LeftFoot'},
-    {'RightUpperLeg', 'RightLowerLeg'}, {'RightLowerLeg', 'RightFoot'}
-}
-local lines = {}
-local outlines = {}
-local function worldToScreen(part)
-    local position, onScreen = Camera:WorldToViewportPoint(part.Position)
-    return Vector2.new(position.X, position.Y), onScreen
-end
-local function getCharacterRig(character)
-    return character:FindFirstChild('Torso') and 'R6' or 'R15'
-end
-local function clearLines()
-    for _, line in ipairs(lines) do line:Remove() end
-    for _, outline in ipairs(outlines) do outline:Remove() end
-    lines = {}; outlines = {}
-end
-local function drawSkeleton()
-    clearLines()
-    if not Config.ESP.Skeleton then return end
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local character = player.Character
-            if character then
-                local humanoid = character:FindFirstChild('Humanoid')
-                local rootPart = character:FindFirstChild('HumanoidRootPart')
-                if humanoid and rootPart and humanoid.Health > 0 then
-                    local connections = getCharacterRig(character) == 'R6' and R6_CONNECTIONS or R15_CONNECTIONS
-                    for _, connection in ipairs(connections) do
-                        local fromPart = character:FindFirstChild(connection[1])
-                        local toPart = character:FindFirstChild(connection[2])
-                        if fromPart and toPart then
-                            local fromScreen, fromVisible = worldToScreen(fromPart)
-                            local toScreen, toVisible = worldToScreen(toPart)
-                            if fromVisible and toVisible then
-                                if default.skeleton.outlineEnabled then
-                                    local outline = Drawing.new('Line')
-                                    outline.From = fromScreen; outline.To = toScreen
-                                    outline.Color = default.skeleton.outlineColor
-                                    outline.Thickness = default.skeleton.outlineThickness
-                                    outline.Visible = true
-                                    table.insert(outlines, outline)
-                                end
-                                local line = Drawing.new('Line')
-                                line.From = fromScreen; line.To = toScreen
-                                line.Color = default.skeleton.color
-                                line.Thickness = default.skeleton.lineThickness
-                                line.Visible = true
-                                table.insert(lines, line)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end
-
-local function playerAdded(p)
-    if p == LocalPlayer then return end
-    local function characterAdded(cr)
-        wait(0.5)
-        if Config.ESP.Enabled then
-            esp(p, cr)
-            updateBoxESP(p)
-            flagsEsp(p, cr)
-            createTrail(cr)
-            createHighlight(p)
-        end
-        if Config.Chams.Enabled then EnableChamsForPlayer(p) end
-    end
-    if p.Character then characterAdded(p.Character) end
-    p.CharacterAdded:Connect(characterAdded)
-end
-
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= LocalPlayer then playerAdded(p) end
-end
-Players.PlayerAdded:Connect(playerAdded)
-
-Players.PlayerRemoving:Connect(function(player)
-    for _, obj in pairs(ESPObjects) do
-        if obj.Parent == player.Character then pcall(function() obj:Destroy() end) end
-    end
-end)
-
-function EnableChamsForPlayer(player)
+local function CreateESPForPlayer(player)
+    if ESPActive then return end
     local char = player.Character
     if not char then return end
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            local highlight = Instance.new("Highlight")
-            highlight.Adornee = part
-            highlight.FillColor = Config.Chams.FillColor
-            highlight.FillTransparency = Config.Chams.Transparency
-            highlight.OutlineColor = Config.Chams.OutlineColor
-            highlight.OutlineTransparency = 0.5
-            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-            highlight.Parent = part
-            table.insert(ChamsObjects, highlight)
+    
+    local torso = FindTorso(char)
+    local head = FindHead(char)
+    local hrp = char:FindFirstChild("HumanoidRootPart") or torso
+    if not hrp then return end
+    
+    local espFolder = Instance.new("Folder")
+    espFolder.Name = "ESP_" .. player.Name
+    espFolder.Parent = char
+    table.insert(ESPObjects, espFolder)
+    
+    if Config.ESP.Box then
+        local box = Instance.new("BoxHandleAdornment")
+        box.Size = Vector3.new(2, 5, 2)
+        box.Adornee = hrp
+        box.Color3 = Color3.fromRGB(255,255,255)
+        box.Transparency = 0.5
+        box.AlwaysOnTop = true
+        box.ZIndex = 0
+        box.Parent = espFolder
+        table.insert(ESPObjects, box)
+    end
+    
+    if Config.ESP.Name then
+        local nameTag = Instance.new("BillboardGui")
+        nameTag.Size = UDim2.new(0, 120, 0, 20)
+        nameTag.Adornee = hrp
+        nameTag.AlwaysOnTop = true
+        nameTag.Parent = espFolder
+        
+        local nameLabel = Instance.new("TextLabel")
+        nameLabel.Size = UDim2.new(1,0,1,0)
+        nameLabel.BackgroundTransparency = 1
+        nameLabel.Text = player.Name
+        nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
+        nameLabel.TextScaled = true
+        nameLabel.Font = Enum.Font.Code
+        nameLabel.Parent = nameTag
+        table.insert(ESPObjects, nameTag)
+    end
+    
+    if Config.ESP.Health then
+        local healthTag = Instance.new("BillboardGui")
+        healthTag.Size = UDim2.new(0, 100, 0, 20)
+        healthTag.Position = UDim2.new(0,0,0,20)
+        healthTag.Adornee = hrp
+        healthTag.AlwaysOnTop = true
+        healthTag.Parent = espFolder
+        
+        local healthLabel = Instance.new("TextLabel")
+        healthLabel.Size = UDim2.new(1,0,1,0)
+        healthLabel.BackgroundTransparency = 1
+        healthLabel.Text = math.floor(char.Humanoid.Health) .. "/" .. char.Humanoid.MaxHealth
+        healthLabel.TextColor3 = Color3.fromRGB(255,255,255)
+        healthLabel.TextScaled = true
+        healthLabel.Font = Enum.Font.Code
+        healthLabel.Parent = healthTag
+        table.insert(ESPObjects, healthTag)
+    end
+    
+    if Config.ESP.Distance then
+        local distTag = Instance.new("BillboardGui")
+        distTag.Size = UDim2.new(0, 80, 0, 20)
+        distTag.Position = UDim2.new(0,0,0,40)
+        distTag.Adornee = hrp
+        distTag.AlwaysOnTop = true
+        distTag.Parent = espFolder
+        
+        local distLabel = Instance.new("TextLabel")
+        distLabel.Size = UDim2.new(1,0,1,0)
+        distLabel.BackgroundTransparency = 1
+        local dist = (hrp.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+        distLabel.Text = math.floor(dist) .. "m"
+        distLabel.TextColor3 = Color3.fromRGB(255,255,255)
+        distLabel.TextScaled = true
+        distLabel.Font = Enum.Font.Code
+        distLabel.Parent = distTag
+        table.insert(ESPObjects, distTag)
+    end
+    
+    if Config.ESP.Skeleton then
+        DrawSkeletonForPlayer(char)
+    end
+end
+
+local function DrawSkeletonForPlayer(char)
+    local parts = {
+        {"Head", "Torso"},
+        {"Torso", "Left Arm"},
+        {"Torso", "Right Arm"},
+        {"Torso", "Left Leg"},
+        {"Torso", "Right Leg"}
+    }
+    
+    for _, connection in ipairs(parts) do
+        local part1 = char:FindFirstChild(connection[1]) or FindTorso(char)
+        local part2 = char:FindFirstChild(connection[2]) or FindTorso(char)
+        if part1 and part2 then
+            local attachment1 = Instance.new("Attachment")
+            attachment1.Position = Vector3.new(0,0,0)
+            attachment1.Parent = part1
+            
+            local attachment2 = Instance.new("Attachment")
+            attachment2.Position = Vector3.new(0,0,0)
+            attachment2.Parent = part2
+            
+            local line = Instance.new("Beam")
+            line.Attachment0 = attachment1
+            line.Attachment1 = attachment2
+            line.Width0 = 0.1
+            line.Width1 = 0.1
+            line.Color = ColorSequence.new(Color3.fromRGB(255,255,255))
+            line.Transparency = NumberSequence.new(0)
+            line.Parent = char
+            table.insert(ESPObjects, line)
         end
     end
 end
@@ -915,21 +713,36 @@ function EnableESP()
     ESPActive = true
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
-            esp(player, player.Character)
-            updateBoxESP(player)
-            flagsEsp(player, player.Character)
-            createTrail(player.Character)
-            createHighlight(player)
+            CreateESPForPlayer(player)
         end
     end
 end
 
 function DisableESP()
     ESPActive = false
-    for _, obj in pairs(ESPObjects) do pcall(function() obj:Destroy() end) end
+    for _, obj in pairs(ESPObjects) do
+        pcall(function() obj:Destroy() end)
+    end
     ESPObjects = {}
-    clearLines()
-    for _, p in ipairs(Players:GetPlayers()) do resetStackingInfo(p.UserId) end
+end
+
+function EnableChamsForPlayer(player)
+    if not ChamsActive then return end
+    local char = player.Character
+    if not char then return end
+    for _, desc in ipairs(char:GetDescendants()) do
+        if desc:IsA("BasePart") then
+            local highlight = Instance.new("Highlight")
+            highlight.Adornee = desc
+            highlight.FillColor = Config.Chams.FillColor
+            highlight.FillTransparency = Config.Chams.Transparency
+            highlight.OutlineColor = Config.Chams.OutlineColor
+            highlight.OutlineTransparency = 0.5
+            highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+            highlight.Parent = desc
+            table.insert(ChamsObjects, highlight)
+        end
+    end
 end
 
 function EnableChams()
@@ -943,7 +756,9 @@ end
 
 function DisableChams()
     ChamsActive = false
-    for _, obj in pairs(ChamsObjects) do pcall(function() obj:Destroy() end) end
+    for _, obj in pairs(ChamsObjects) do
+        pcall(function() obj:Destroy() end)
+    end
     ChamsObjects = {}
 end
 
@@ -951,20 +766,32 @@ function EnableFly()
     FlyActive = true
     local char = LocalPlayer.Character
     if char then
+        local hrp = char:FindFirstChild("HumanoidRootPart")
         local humanoid = char:FindFirstChild("Humanoid")
-        if humanoid then humanoid.PlatformStand = true end
+        if humanoid and hrp then
+            humanoid.PlatformStand = true
+            humanoid.WalkSpeed = 0
+            hrp.AssemblyLinearVelocity = Vector3.new(0, Config.Fly.HeightOffset, 0)
+        end
     end
 end
+
 function DisableFly()
     FlyActive = false
     local char = LocalPlayer.Character
     if char then
         local humanoid = char:FindFirstChild("Humanoid")
-        if humanoid then humanoid.PlatformStand = false end
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if root then root.Velocity = Vector3.new(0,0,0) end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if humanoid then
+            humanoid.PlatformStand = false
+            humanoid.WalkSpeed = 16
+        end
+        if hrp then
+            hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
+        end
     end
 end
+
 function EnableSpeed()
     SpeedActive = true
     local char = LocalPlayer.Character
@@ -973,6 +800,7 @@ function EnableSpeed()
         if humanoid then humanoid.WalkSpeed = Config.Speed.Speed end
     end
 end
+
 function DisableSpeed()
     SpeedActive = false
     local char = LocalPlayer.Character
@@ -981,98 +809,28 @@ function DisableSpeed()
         if humanoid then humanoid.WalkSpeed = 16 end
     end
 end
+
 function EnableAntiAim()
     AntiAimActive = true
 end
+
 function DisableAntiAim()
     AntiAimActive = false
 end
 
-local isDraggingTitle = false
-local dragOffsetTitle = Vector2.new()
-
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        isDraggingTitle = true
-        dragOffsetTitle = Vector2.new(input.Position.X - MainFrame.AbsolutePosition.X, input.Position.Y - MainFrame.AbsolutePosition.Y)
-    end
-end)
-
-TitleBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        isDraggingTitle = false
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if isDraggingTitle and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
-        MainFrame.Position = UDim2.new(0, input.Position.X - dragOffsetTitle.X, 0, input.Position.Y - dragOffsetTitle.Y)
-    end
-end)
-
-local isDraggingCircle = false
-local dragOffsetCircle = Vector2.new()
-local isCircleClick = false
-
-CircleButton.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        isDraggingCircle = true
-        isCircleClick = true
-        dragOffsetCircle = Vector2.new(input.Position.X - CircleButton.AbsolutePosition.X, input.Position.Y - CircleButton.AbsolutePosition.Y)
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if isDraggingCircle and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
-        local currentPos = Vector2.new(input.Position.X, input.Position.Y)
-        if (currentPos - CircleButton.AbsolutePosition.X).Magnitude > 8 then
-            isCircleClick = false
-            CircleButton.Position = UDim2.new(0, currentPos.X - dragOffsetCircle.X, 0, currentPos.Y - dragOffsetCircle.Y)
-        end
-    end
-end)
-
-CircleButton.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        if isCircleClick then
-            MenuOpen = not MenuOpen
-            MainFrame.Visible = MenuOpen
-            if MenuOpen then
-                if Config.FOVCircle.Enabled then CreateFOVCircle() end
-            else
-                if FOVCircle then FOVCircle.Visible = false end
-            end
-        end
-        isDraggingCircle = false
-    end
-end)
-
-CloseBtn.MouseButton1Click:Connect(function()
-    MenuOpen = false
-    MainFrame.Visible = false
-    if FOVCircle then FOVCircle.Visible = false end
-end)
-
-CloseBtn.TouchTap:Connect(function()
-    MenuOpen = false
-    MainFrame.Visible = false
-    if FOVCircle then FOVCircle.Visible = false end
-end)
-
-local function GetClosestPlayer()
+local function GetClosestPlayerByDistance(range)
     local closest = nil
-    local bestDist = math.huge
+    local bestDist = range
+    local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myPos then return nil end
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local head = player.Character:FindFirstChild(Config.AimBot.AimPart) or player.Character:FindFirstChild("Head")
-            if head then
-                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
-                if onScreen then
-                    local dist = (pos - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                    if dist < Config.AimBot.FOV and dist < bestDist then
-                        bestDist = dist
-                        closest = player
-                    end
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart") or FindTorso(player.Character)
+            if hrp then
+                local dist = (myPos.Position - hrp.Position).Magnitude
+                if dist < bestDist then
+                    bestDist = dist
+                    closest = player
                 end
             end
         end
@@ -1080,38 +838,17 @@ local function GetClosestPlayer()
     return closest
 end
 
-local function GetClosestPlayerForSilent()
+local function GetClosestPlayerByScreen(range)
     local closest = nil
-    local bestDist = math.huge
+    local bestDist = range
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local head = player.Character:FindFirstChild(Config.Silent.AimPart) or player.Character:FindFirstChild("Head")
+            local head = FindHead(player.Character)
             if head then
                 local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
                 if onScreen then
                     local dist = (pos - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                    if dist < Config.Silent.FOV and dist < bestDist then
-                        bestDist = dist
-                        closest = player
-                    end
-                end
-            end
-        end
-    end
-    return closest
-end
-
-local function GetClosestPlayerForTrigger()
-    local closest = nil
-    local bestDist = math.huge
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local head = player.Character:FindFirstChild("Head") or player.Character:FindFirstChild("HumanoidRootPart")
-            if head then
-                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
-                if onScreen then
-                    local dist = (pos - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                    if dist < Config.Trigger.FOV and dist < bestDist then
+                    if dist < bestDist then
                         bestDist = dist
                         closest = player
                     end
@@ -1131,6 +868,23 @@ local function FireRemoteAt(target)
 end
 
 local triggerDelay = 0
+local lastClickTime = 0
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        lastClickTime = tick()
+        if Config.Silent.Enabled and not MenuOpen then
+            local target = GetClosestPlayerByDistance(Config.Silent.Range)
+            if target then
+                local aimPart = target.Character:FindFirstChild(Config.Silent.AimPart) or FindHead(target.Character)
+                if aimPart then
+                    FireRemoteAt(aimPart.Position)
+                end
+            end
+        end
+    end
+end)
 
 RunService.Heartbeat:Connect(function()
     local currentTick = tick()
@@ -1138,63 +892,26 @@ RunService.Heartbeat:Connect(function()
         CurrentFPS = math.floor(1 / (currentTick - LastFrameTime))
         LastFrameTime = currentTick
     end
-end)
-
-local function UpdateIndicators()
-    for _, obj in pairs(IndicatorObjects) do obj:Destroy() end
-    IndicatorObjects = {}
-    if not (Config.ESP.Enabled and Config.ESP.Box) then return end
-    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local pos, onScreen = Camera:WorldToViewportPoint(player.Character.HumanoidRootPart.Position)
-            if not onScreen then
-                local dir = (Vector2.new(pos.X, pos.Y) - center)
-                if dir.Magnitude > 0 then
-                    dir = dir.Unit
-                    local arrow = Instance.new("TextLabel")
-                    arrow.Size = UDim2.new(0, 24, 0, 24)
-                    arrow.Position = UDim2.new(0, center.X + dir.X * 100 - 12, 0, center.Y + dir.Y * 100 - 12)
-                    arrow.BackgroundTransparency = 1
-                    arrow.Text = "➤"
-                    arrow.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    arrow.TextScaled = true
-                    arrow.Font = Enum.Font.Code
-                    arrow.Rotation = math.deg(math.atan2(dir.Y, dir.X)) + 90
-                    arrow.Parent = ScreenGui
-                    table.insert(IndicatorObjects, arrow)
+    
+    if Config.BunnyHop.Enabled then
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            local char = LocalPlayer.Character
+            if char then
+                local humanoid = char:FindFirstChild("Humanoid")
+                if humanoid and humanoid.FloorMaterial ~= Enum.Material.Air then
+                    humanoid.Jump = true
+                    if Config.BunnyHop.IncreaseSpeed and tick() - LastBhopTime > 0.1 then
+                        BhopSpeed = math.min(BhopSpeed + 5, Config.BunnyHop.MaxSpeed)
+                        humanoid.WalkSpeed = BhopSpeed
+                        LastBhopTime = tick()
+                    end
                 end
             end
+        else
+            BhopSpeed = 16
         end
     end
-end
-
-local function UpdateDistanceLines()
-    for _, obj in pairs(DistanceLines) do obj:Destroy() end
-    DistanceLines = {}
-    if not (Config.ESP.Enabled and Config.ESP.Distance) then return end
-    local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not myPos then return end
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local hrp = player.Character.HumanoidRootPart
-            local myScreen, myOn = Camera:WorldToViewportPoint(myPos.Position)
-            local hrpScreen, hrpOn = Camera:WorldToViewportPoint(hrp.Position)
-            if myOn and hrpOn then
-                local line = Instance.new("Frame")
-                line.Size = UDim2.new(0, 1, 0, 1)
-                line.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                line.BackgroundTransparency = 0.5
-                line.BorderSizePixel = 0
-                line.Parent = ScreenGui
-                table.insert(DistanceLines, line)
-                local angle = math.atan2(hrpScreen.Y - myScreen.Y, hrpScreen.X - myScreen.X)
-                line.Rotation = math.deg(angle)
-                line.Position = UDim2.new(0, myScreen.X, 0, myScreen.Y)
-            end
-        end
-    end
-end
+end)
 
 RunService.RenderStepped:Connect(function()
     if Config.FOVCircle.Enabled and FOVCircle then
@@ -1209,9 +926,12 @@ RunService.RenderStepped:Connect(function()
     end
     
     if Config.AimBot.Enabled and not MenuOpen then
-        local target = GetClosestPlayer()
+        local target = GetClosestPlayerByScreen(Config.AimBot.FOV)
+        if not target then
+            target = GetClosestPlayerByDistance(Config.AimBot.Range)
+        end
         if target and target.Character then
-            local aimPart = target.Character:FindFirstChild(Config.AimBot.AimPart) or target.Character:FindFirstChild("Head")
+            local aimPart = target.Character:FindFirstChild(Config.AimBot.AimPart) or FindHead(target.Character)
             if aimPart then
                 if Config.AimBot.Mode == "Camera" then
                     Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
@@ -1225,9 +945,9 @@ RunService.RenderStepped:Connect(function()
     if Config.Trigger.Enabled and not MenuOpen then
         triggerDelay = triggerDelay + 1
         if triggerDelay >= Config.Trigger.Delay then
-            local target = GetClosestPlayerForTrigger()
+            local target = GetClosestPlayerByDistance(Config.Trigger.Range)
             if target then
-                local aimPart = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                local aimPart = FindHead(target.Character)
                 if aimPart then
                     FireRemoteAt(aimPart.Position)
                 end
@@ -1236,21 +956,11 @@ RunService.RenderStepped:Connect(function()
         end
     end
     
-    if Config.BunnyHop.Enabled and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-        local char = LocalPlayer.Character
-        if char then
-            local humanoid = char:FindFirstChild("Humanoid")
-            if humanoid and humanoid.FloorMaterial ~= Enum.Material.Air then
-                humanoid.Jump = true
-            end
-        end
-    end
-    
     if FlyActive and LocalPlayer.Character then
         local char = LocalPlayer.Character
+        local hrp = char:FindFirstChild("HumanoidRootPart")
         local humanoid = char:FindFirstChild("Humanoid")
-        local root = char:FindFirstChild("HumanoidRootPart")
-        if humanoid and root then
+        if hrp and humanoid then
             local moveDirection = Vector3.new(0,0,0)
             if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Camera.CFrame.LookVector end
             if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - Camera.CFrame.LookVector end
@@ -1259,9 +969,9 @@ RunService.RenderStepped:Connect(function()
             if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0,1,0) end
             if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDirection = moveDirection - Vector3.new(0,1,0) end
             if moveDirection.Magnitude > 0 then
-                root.Velocity = moveDirection.Unit * Config.Fly.Speed
+                hrp.AssemblyLinearVelocity = moveDirection.Unit * Config.Fly.Speed
             else
-                root.Velocity = Vector3.new(0,0,0)
+                hrp.AssemblyLinearVelocity = Vector3.new(0, Config.Fly.HeightOffset, 0)
             end
             humanoid.PlatformStand = true
         end
@@ -1288,9 +998,6 @@ RunService.RenderStepped:Connect(function()
             end
         end
     end
-    
-    UpdateIndicators()
-    UpdateDistanceLines()
 end)
 
 local Watermark = Instance.new("TextLabel")
@@ -1332,26 +1039,28 @@ RunService.Heartbeat:Connect(function()
     end
     if Config.SpeedIndicator.Enabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         SpeedLabel.Visible = true
-        local speed = LocalPlayer.Character.HumanoidRootPart.Velocity.Magnitude
+        local speed = LocalPlayer.Character.HumanoidRootPart.AssemblyLinearVelocity.Magnitude
         SpeedLabel.Text = "Speed: " .. math.floor(speed)
     else
         SpeedLabel.Visible = false
     end
 end)
 
+local isDraggingCircle = false
+local dragStartCircle = Vector2.new()
+local dragOffsetCircle = Vector2.new()
+local isClickCircle = false
+
 UserInputService.InputBegan:Connect(function(input)
-    if Config.Silent.Enabled and not MenuOpen then
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            local target = GetClosestPlayerForSilent()
-            if target then
-                local aimPart = target.Character:FindFirstChild(Config.Silent.AimPart) or target.Character:FindFirstChild("Head")
-                if aimPart then
-                    FireRemoteAt(aimPart.Position)
-                end
-            end
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local pos = Vector2.new(input.Position.X, input.Position.Y)
+        local absPos = CircleButton.AbsolutePosition
+        local size = CircleButton.AbsoluteSize
+        if pos.X >= absPos.X and pos.X <= absPos.X + size.X and pos.Y >= absPos.Y and pos.Y <= absPos.Y + size.Y then
+            isDraggingCircle = true
+            isClickCircle = true
+            dragStartCircle = pos
+            dragOffsetCircle = Vector2.new(pos.X - CircleButton.AbsolutePosition.X, pos.Y - CircleButton.AbsolutePosition.Y)
         end
     end
 end)
-
-if Config.FOVCircle.Enabled then CreateFOVCircle() end
-print("Hiruku Internal Loaded! Press H to open menu")
