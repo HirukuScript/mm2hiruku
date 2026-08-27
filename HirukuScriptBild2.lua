@@ -13,15 +13,16 @@ local Config = {
     Silent = {Enabled = false, Range = 15, FOV = 35, AimPart = "Head"},
     Trigger = {Enabled = false, Range = 20, FOV = 10, Delay = 50},
     Chams = {Enabled = false, Transparency = 0.3, Color = Color3.fromRGB(255,0,0)},
-    ESP = {Enabled = false, Box = true, Name = true, Health = true, Distance = true, Tracer = false},
+    ESP = {Enabled = false, Box = true, Name = true, Health = true, Distance = true, Tracer = false, Skeleton = false},
     BunnyHop = {Enabled = false},
     Speed = {Enabled = false, Speed = 50},
     Fly = {Enabled = false, Speed = 50},
     AntiAim = {Enabled = false, Mode = "Jitter", SpinSpeed = 90, HeadDown = false},
     Watermark = {Enabled = true},
+    FOVCircle = {Enabled = true},
     World = {
         Fog = {Enabled = false, Color = Color3.fromRGB(255,255,255), Density = 0.5},
-        Sky = {Enabled = false, Color = Color3.fromRGB(135,206,235), Brightness = 1},
+        Sky = {Enabled = false, Color = Color3.fromRGB(135,206,235)},
         Ambient = {Enabled = false, Color = Color3.fromRGB(128,128,128)}
     },
     Tracer = {Enabled = false, Color = Color3.fromRGB(255,0,0), Width = 2, Length = 10}
@@ -37,7 +38,9 @@ local CurrentFPS = 0
 local LastFrameTime = tick()
 local SelectedSection = "Combat"
 local FOVCircle = nil
-local SilentTarget = nil
+local ESPObjects = {}
+local ChamsObjects = {}
+local SkeletonLines = {}
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HirukuInternal"
@@ -45,8 +48,8 @@ ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
 local CircleButton = Instance.new("ImageButton")
-CircleButton.Size = UDim2.new(0, 45, 0, 45)
-CircleButton.Position = UDim2.new(0.02, 0, 0.5, -22.5)
+CircleButton.Size = UDim2.new(0, 40, 0, 40)
+CircleButton.Position = UDim2.new(0.02, 0, 0.5, -20)
 CircleButton.BackgroundColor3 = Color3.fromRGB(0,0,0)
 CircleButton.BackgroundTransparency = 0
 CircleButton.BorderSizePixel = 2
@@ -100,18 +103,9 @@ local function CreateFOVCircle()
     fovCorner.Parent = FOVCircle
 end
 
-local function UpdateFOVCircle()
-    if FOVCircle then
-        FOVCircle.Size = UDim2.new(0, Config.AimBot.FOV * 2, 0, Config.AimBot.FOV * 2)
-        FOVCircle.Position = UDim2.new(0.5, -Config.AimBot.FOV, 0.5, -Config.AimBot.FOV)
-        FOVCircle.BackgroundColor3 = Config.AimBot.FOVColor
-        FOVCircle.BorderColor3 = Config.AimBot.FOVColor
-    end
-end
-
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 380, 0, 180)
-MainFrame.Position = UDim2.new(0.5, -190, 0.5, -90)
+MainFrame.Size = UDim2.new(0, 400, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -125)
 MainFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 1
@@ -119,10 +113,11 @@ MainFrame.BorderColor3 = Color3.fromRGB(255,0,0)
 MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.Draggable = false
+MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
 local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1,0,0,25)
+TitleBar.Size = UDim2.new(1,0,0,30)
 TitleBar.BackgroundColor3 = Color3.fromRGB(10,10,10)
 TitleBar.BorderSizePixel = 0
 TitleBar.BorderColor3 = Color3.fromRGB(255,0,0)
@@ -140,8 +135,8 @@ TitleText.Font = Enum.Font.GothamBold
 TitleText.Parent = TitleBar
 
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0,20,0,20)
-CloseBtn.Position = UDim2.new(1,-25,0,2.5)
+CloseBtn.Size = UDim2.new(0,22,0,22)
+CloseBtn.Position = UDim2.new(1,-26,0,4)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(20,20,20)
 CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = Color3.fromRGB(255,0,0)
@@ -155,8 +150,8 @@ closeCorner.CornerRadius = UDim.new(0,3)
 closeCorner.Parent = CloseBtn
 
 local TabBar = Instance.new("Frame")
-TabBar.Size = UDim2.new(1,0,0,22)
-TabBar.Position = UDim2.new(0,0,0,25)
+TabBar.Size = UDim2.new(1,0,0,25)
+TabBar.Position = UDim2.new(0,0,0,30)
 TabBar.BackgroundColor3 = Color3.fromRGB(5,5,5)
 TabBar.BorderSizePixel = 0
 TabBar.Parent = MainFrame
@@ -179,12 +174,12 @@ for i, name in ipairs(Sections) do
     SectionButtons[name] = btn
     
     local content = Instance.new("ScrollingFrame")
-    content.Size = UDim2.new(1,0,1,-47)
-    content.Position = UDim2.new(0,0,0,47)
+    content.Size = UDim2.new(1,0,1,-55)
+    content.Position = UDim2.new(0,0,0,55)
     content.BackgroundColor3 = Color3.fromRGB(0,0,0)
     content.BackgroundTransparency = 0
     content.BorderSizePixel = 0
-    content.ScrollBarThickness = 2
+    content.ScrollBarThickness = 3
     content.ScrollBarImageColor3 = Color3.fromRGB(255,0,0)
     content.Visible = (i == 1)
     content.CanvasSize = UDim2.new(0,0,0,0)
@@ -194,10 +189,10 @@ end
 
 local function CreateFolder(parent, title, configPath, options)
     local folder = Instance.new("Frame")
-    folder.Size = UDim2.new(1,0,0,30)
-    folder.Position = UDim2.new(0,0,0,#parent:GetChildren()*32)
+    folder.Size = UDim2.new(1,0,0,28)
+    folder.Position = UDim2.new(0,0,0,#parent:GetChildren()*30)
     folder.BackgroundColor3 = Color3.fromRGB(8,8,8)
-    folder.BorderSizePixel = 1
+    folder.BorderSizePixel = 0
     folder.BorderColor3 = Color3.fromRGB(20,20,20)
     folder.ClipsDescendants = true
     folder.Parent = parent
@@ -208,14 +203,15 @@ local function CreateFolder(parent, title, configPath, options)
     header.Text = title
     header.TextColor3 = Color3.fromRGB(200,200,200)
     header.TextXAlignment = Enum.TextXAlignment.Left
-    header.TextScaled = true
+    header.TextScaled = false
     header.Font = Enum.Font.Gotham
+    header.TextSize = 12
     header.BorderSizePixel = 0
     header.Parent = folder
     
     local arrow = Instance.new("TextLabel")
-    arrow.Size = UDim2.new(0,20,1,0)
-    arrow.Position = UDim2.new(1,-20,0,0)
+    arrow.Size = UDim2.new(0,18,1,0)
+    arrow.Position = UDim2.new(1,-18,0,0)
     arrow.BackgroundTransparency = 1
     arrow.Text = "▼"
     arrow.TextColor3 = Color3.fromRGB(255,0,0)
@@ -225,23 +221,23 @@ local function CreateFolder(parent, title, configPath, options)
     
     local content = Instance.new("Frame")
     content.Size = UDim2.new(1,0,0,0)
-    content.Position = UDim2.new(0,0,0,30)
+    content.Position = UDim2.new(0,0,0,28)
     content.BackgroundTransparency = 1
     content.Parent = folder
     
     local expanded = false
     
     local function updateContent()
-        content.Size = UDim2.new(1,0,0, #content:GetChildren() * 28)
-        folder.Size = UDim2.new(1,0,0, 30 + #content:GetChildren() * 28)
+        content.Size = UDim2.new(1,0,0, #content:GetChildren() * 24)
+        folder.Size = UDim2.new(1,0,0, 28 + #content:GetChildren() * 24)
         if expanded then
             arrow.Text = "▲"
         else
             arrow.Text = "▼"
             content.Size = UDim2.new(1,0,0,0)
-            folder.Size = UDim2.new(1,0,0,30)
+            folder.Size = UDim2.new(1,0,0,28)
         end
-        parent.CanvasSize = UDim2.new(0,0,0, #parent:GetChildren() * 32 + 10)
+        parent.CanvasSize = UDim2.new(0,0,0, #parent:GetChildren() * 30 + 10)
     end
     
     header.MouseButton1Click:Connect(function()
@@ -252,24 +248,25 @@ local function CreateFolder(parent, title, configPath, options)
     for _, opt in ipairs(options) do
         if opt.type == "toggle" then
             local holder = Instance.new("Frame")
-            holder.Size = UDim2.new(1,0,0,28)
+            holder.Size = UDim2.new(1,0,0,24)
             holder.BackgroundTransparency = 1
             holder.Parent = content
             
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.6,0,1,0)
-            label.Position = UDim2.new(0,10,0,0)
+            label.Size = UDim2.new(0.5,0,1,0)
+            label.Position = UDim2.new(0,8,0,0)
             label.BackgroundTransparency = 1
             label.Text = opt.label
             label.TextColor3 = Color3.fromRGB(180,180,180)
             label.TextXAlignment = Enum.TextXAlignment.Left
-            label.TextScaled = true
+            label.TextScaled = false
             label.Font = Enum.Font.Gotham
+            label.TextSize = 11
             label.Parent = holder
             
             local toggle = Instance.new("Frame")
-            toggle.Size = UDim2.new(0,30,0,14)
-            toggle.Position = UDim2.new(0.85,0,0.25,0)
+            toggle.Size = UDim2.new(0,28,0,12)
+            toggle.Position = UDim2.new(0.82,0,0.25,0)
             toggle.BackgroundColor3 = Color3.fromRGB(30,30,30)
             toggle.BorderSizePixel = 0
             toggle.Parent = holder
@@ -279,7 +276,7 @@ local function CreateFolder(parent, title, configPath, options)
             toggleCorner.Parent = toggle
             
             local check = Instance.new("Frame")
-            check.Size = UDim2.new(0,12,0,12)
+            check.Size = UDim2.new(0,10,0,10)
             check.Position = UDim2.new(0,1,0,1)
             check.BackgroundColor3 = Color3.fromRGB(255,0,0)
             check.BorderSizePixel = 0
@@ -293,13 +290,11 @@ local function CreateFolder(parent, title, configPath, options)
                 local current = Config
                 for _, v in ipairs(opt.path) do current = current[v] end
                 if current then
-                    check.Position = UDim2.new(0,17,0,1)
-                    toggle.BackgroundColor3 = Color3.fromRGB(50,0,0)
                     TweenService:Create(check, TweenInfo.new(0.2), {Position = UDim2.new(0,17,0,1)}):Play()
+                    toggle.BackgroundColor3 = Color3.fromRGB(50,0,0)
                 else
-                    check.Position = UDim2.new(0,1,0,1)
-                    toggle.BackgroundColor3 = Color3.fromRGB(30,30,30)
                     TweenService:Create(check, TweenInfo.new(0.2), {Position = UDim2.new(0,1,0,1)}):Play()
+                    toggle.BackgroundColor3 = Color3.fromRGB(30,30,30)
                 end
             end
             updateToggle()
@@ -316,53 +311,40 @@ local function CreateFolder(parent, title, configPath, options)
                     if opt.path[1] == "Chams" and opt.path[2] == "Enabled" then
                         if Config.Chams.Enabled then EnableChams() else DisableChams() end
                     end
-                    if opt.path[1] == "Fly" and opt.path[2] == "Enabled" then
-                        if Config.Fly.Enabled then EnableFly() else DisableFly() end
-                    end
-                    if opt.path[1] == "Speed" and opt.path[2] == "Enabled" then
-                        if Config.Speed.Enabled then EnableSpeed() else DisableSpeed() end
-                    end
-                    if opt.path[1] == "AntiAim" and opt.path[2] == "Enabled" then
-                        if Config.AntiAim.Enabled then EnableAntiAim() else DisableAntiAim() end
-                    end
-                    if opt.path[1] == "AimBot" and opt.path[2] == "DrawFOV" then
-                        if Config.AimBot.DrawFOV then CreateFOVCircle() else if FOVCircle then FOVCircle:Destroy() end end
-                    end
-                    if opt.path[1] == "AimBot" and opt.path[2] == "Enabled" then
-                        if Config.AimBot.Enabled and Config.AimBot.DrawFOV then CreateFOVCircle() else if FOVCircle then FOVCircle:Destroy() end end
-                    end
                 end
             end)
         elseif opt.type == "slider" then
             local holder = Instance.new("Frame")
-            holder.Size = UDim2.new(1,0,0,28)
+            holder.Size = UDim2.new(1,0,0,24)
             holder.BackgroundTransparency = 1
             holder.Parent = content
             
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.4,0,1,0)
-            label.Position = UDim2.new(0,10,0,0)
+            label.Size = UDim2.new(0.35,0,1,0)
+            label.Position = UDim2.new(0,8,0,0)
             label.BackgroundTransparency = 1
             label.Text = opt.label
             label.TextColor3 = Color3.fromRGB(180,180,180)
             label.TextXAlignment = Enum.TextXAlignment.Left
-            label.TextScaled = true
+            label.TextScaled = false
             label.Font = Enum.Font.Gotham
+            label.TextSize = 11
             label.Parent = holder
             
             local val = Instance.new("TextLabel")
             val.Size = UDim2.new(0.1,0,1,0)
-            val.Position = UDim2.new(0.45,0,0,0)
+            val.Position = UDim2.new(0.4,0,0,0)
             val.BackgroundTransparency = 1
             val.Text = "0"
             val.TextColor3 = Color3.fromRGB(255,0,0)
-            val.TextScaled = true
+            val.TextScaled = false
             val.Font = Enum.Font.GothamBold
+            val.TextSize = 11
             val.Parent = holder
             
             local slider = Instance.new("Frame")
-            slider.Size = UDim2.new(0.35,0,0.2,0)
-            slider.Position = UDim2.new(0.6,0,0.4,0)
+            slider.Size = UDim2.new(0.3,0,0.2,0)
+            slider.Position = UDim2.new(0.65,0,0.4,0)
             slider.BackgroundColor3 = Color3.fromRGB(30,30,30)
             slider.BorderSizePixel = 0
             slider.Parent = holder
@@ -391,9 +373,6 @@ local function CreateFolder(parent, title, configPath, options)
                 else
                     val.Text = tostring(math.round(current))
                 end
-                if opt.path[1] == "AimBot" and opt.path[2] == "FOV" then
-                    UpdateFOVCircle()
-                end
             end
             updateSlider()
             
@@ -404,11 +383,7 @@ local function CreateFolder(parent, title, configPath, options)
                     local pos = input.Position.X - slider.AbsolutePosition.X
                     local percent = math.clamp(pos / slider.AbsoluteSize.X, 0, 1)
                     local value = opt.min + (opt.max - opt.min) * percent
-                    if opt.decimal then
-                        value = math.round(value / 0.01) * 0.01
-                    else
-                        value = math.round(value)
-                    end
+                    if opt.decimal then value = math.round(value / 0.01) * 0.01 else value = math.round(value) end
                     local current = Config
                     for i = 1, #opt.path - 1 do current = current[opt.path[i]] end
                     current[opt.path[#opt.path]] = value
@@ -420,11 +395,7 @@ local function CreateFolder(parent, title, configPath, options)
                     local pos = input.Position.X - slider.AbsolutePosition.X
                     local percent = math.clamp(pos / slider.AbsoluteSize.X, 0, 1)
                     local value = opt.min + (opt.max - opt.min) * percent
-                    if opt.decimal then
-                        value = math.round(value / 0.01) * 0.01
-                    else
-                        value = math.round(value)
-                    end
+                    if opt.decimal then value = math.round(value / 0.01) * 0.01 else value = math.round(value) end
                     local current = Config
                     for i = 1, #opt.path - 1 do current = current[opt.path[i]] end
                     current[opt.path[#opt.path]] = value
@@ -438,28 +409,30 @@ local function CreateFolder(parent, title, configPath, options)
             end)
         elseif opt.type == "dropdown" then
             local holder = Instance.new("Frame")
-            holder.Size = UDim2.new(1,0,0,28)
+            holder.Size = UDim2.new(1,0,0,24)
             holder.BackgroundTransparency = 1
             holder.Parent = content
             
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.4,0,1,0)
-            label.Position = UDim2.new(0,10,0,0)
+            label.Size = UDim2.new(0.35,0,1,0)
+            label.Position = UDim2.new(0,8,0,0)
             label.BackgroundTransparency = 1
             label.Text = opt.label
             label.TextColor3 = Color3.fromRGB(180,180,180)
             label.TextXAlignment = Enum.TextXAlignment.Left
-            label.TextScaled = true
+            label.TextScaled = false
             label.Font = Enum.Font.Gotham
+            label.TextSize = 11
             label.Parent = holder
             
             local dropdown = Instance.new("TextButton")
-            dropdown.Size = UDim2.new(0.4,0,0.7,0)
-            dropdown.Position = UDim2.new(0.55,0,0.15,0)
+            dropdown.Size = UDim2.new(0.35,0,0.7,0)
+            dropdown.Position = UDim2.new(0.6,0,0.15,0)
             dropdown.BackgroundColor3 = Color3.fromRGB(20,20,20)
             dropdown.TextColor3 = Color3.fromRGB(200,200,200)
-            dropdown.TextScaled = true
+            dropdown.TextScaled = false
             dropdown.Font = Enum.Font.Gotham
+            dropdown.TextSize = 11
             dropdown.BorderSizePixel = 1
             dropdown.BorderColor3 = Color3.fromRGB(255,0,0)
             dropdown.Parent = holder
@@ -474,8 +447,8 @@ local function CreateFolder(parent, title, configPath, options)
             
             local expanded = false
             local optionFrame = Instance.new("Frame")
-            optionFrame.Size = UDim2.new(0.4,0,0,0)
-            optionFrame.Position = UDim2.new(0.55,0,0.85,0)
+            optionFrame.Size = UDim2.new(0.35,0,0,0)
+            optionFrame.Position = UDim2.new(0.6,0,0.85,0)
             optionFrame.BackgroundColor3 = Color3.fromRGB(10,10,10)
             optionFrame.BorderSizePixel = 1
             optionFrame.BorderColor3 = Color3.fromRGB(255,0,0)
@@ -493,13 +466,14 @@ local function CreateFolder(parent, title, configPath, options)
                 end
                 for i, option in ipairs(opt.options) do
                     local btn = Instance.new("TextButton")
-                    btn.Size = UDim2.new(1,0,0,20)
-                    btn.Position = UDim2.new(0,0,0,(i-1)*20)
+                    btn.Size = UDim2.new(1,0,0,18)
+                    btn.Position = UDim2.new(0,0,0,(i-1)*18)
                     btn.BackgroundColor3 = Color3.fromRGB(15,15,15)
                     btn.Text = option
                     btn.TextColor3 = Color3.fromRGB(200,200,200)
-                    btn.TextScaled = true
+                    btn.TextScaled = false
                     btn.Font = Enum.Font.Gotham
+                    btn.TextSize = 11
                     btn.BorderSizePixel = 0
                     btn.Parent = optionFrame
                     
@@ -510,14 +484,10 @@ local function CreateFolder(parent, title, configPath, options)
                         dropdown.Text = option
                         expanded = false
                         optionFrame.Visible = false
-                        optionFrame.Size = UDim2.new(0.4,0,0,0)
-                        if opt.path[1] == "AntiAim" and opt.path[2] == "Mode" and Config.AntiAim.Enabled then
-                            DisableAntiAim()
-                            EnableAntiAim()
-                        end
+                        optionFrame.Size = UDim2.new(0.35,0,0,0)
                     end)
                 end
-                optionFrame.Size = UDim2.new(0.4,0,0,#opt.options*20)
+                optionFrame.Size = UDim2.new(0.35,0,0,#opt.options*18)
             end
             updateOptions()
             
@@ -525,52 +495,9 @@ local function CreateFolder(parent, title, configPath, options)
                 expanded = not expanded
                 optionFrame.Visible = expanded
                 if expanded then
-                    optionFrame.Size = UDim2.new(0.4,0,0,#opt.options*20)
+                    optionFrame.Size = UDim2.new(0.35,0,0,#opt.options*18)
                 else
-                    optionFrame.Size = UDim2.new(0.4,0,0,0)
-                end
-            end)
-        elseif opt.type == "color" then
-            local holder = Instance.new("Frame")
-            holder.Size = UDim2.new(1,0,0,28)
-            holder.BackgroundTransparency = 1
-            holder.Parent = content
-            
-            local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.6,0,1,0)
-            label.Position = UDim2.new(0,10,0,0)
-            label.BackgroundTransparency = 1
-            label.Text = opt.label
-            label.TextColor3 = Color3.fromRGB(180,180,180)
-            label.TextXAlignment = Enum.TextXAlignment.Left
-            label.TextScaled = true
-            label.Font = Enum.Font.Gotham
-            label.Parent = holder
-            
-            local colorBtn = Instance.new("ImageButton")
-            colorBtn.Size = UDim2.new(0,25,0,20)
-            colorBtn.Position = UDim2.new(0.85,0,0.15,0)
-            colorBtn.BackgroundColor3 = Color3.fromRGB(255,0,0)
-            colorBtn.BorderSizePixel = 1
-            colorBtn.BorderColor3 = Color3.fromRGB(200,200,200)
-            colorBtn.Parent = holder
-            
-            local colorCorner = Instance.new("UICorner")
-            colorCorner.CornerRadius = UDim.new(0,2)
-            colorCorner.Parent = colorBtn
-            
-            local current = Config
-            for _, v in ipairs(opt.path) do current = current[v] end
-            colorBtn.BackgroundColor3 = current
-            
-            colorBtn.MouseButton1Click:Connect(function()
-                local current = Config
-                for i = 1, #opt.path - 1 do current = current[opt.path[i]] end
-                local color = Color3.fromRGB(255, math.random(0,255), math.random(0,255))
-                current[opt.path[#opt.path]] = color
-                colorBtn.BackgroundColor3 = color
-                if opt.path[1] == "AimBot" and opt.path[2] == "FOVColor" then
-                    UpdateFOVCircle()
+                    optionFrame.Size = UDim2.new(0.35,0,0,0)
                 end
             end)
         end
@@ -583,20 +510,17 @@ end
 local CombatTab = SectionContents["Combat"]
 CreateFolder(CombatTab, "AimBot", {}, {
     {type = "toggle", label = "Enable", path = {"AimBot","Enabled"}},
-    {type = "toggle", label = "Draw FOV", path = {"AimBot","DrawFOV"}},
     {type = "slider", label = "FOV", path = {"AimBot","FOV"}, min = 1, max = 180},
     {type = "slider", label = "Smooth", path = {"AimBot","Smooth"}, min = 0, max = 1, decimal = true},
     {type = "slider", label = "Range", path = {"AimBot","Range"}, min = 1, max = 50},
-    {type = "dropdown", label = "Aim Part", path = {"AimBot","AimPart"}, options = {"Head","Torso","HumanoidRootPart"}},
-    {type = "color", label = "FOV Color", path = {"AimBot","FOVColor"}}
+    {type = "dropdown", label = "Aim Part", path = {"AimBot","AimPart"}, options = {"Head","Torso","HumanoidRootPart"}}
 })
-CreateFolder(CombatTab, "Silent Aim", {}, {
+CreateFolder(CombatTab, "Silent", {}, {
     {type = "toggle", label = "Enable", path = {"Silent","Enabled"}},
     {type = "slider", label = "FOV", path = {"Silent","FOV"}, min = 1, max = 180},
-    {type = "slider", label = "Range", path = {"Silent","Range"}, min = 1, max = 50},
-    {type = "dropdown", label = "Aim Part", path = {"Silent","AimPart"}, options = {"Head","Torso","HumanoidRootPart"}}
+    {type = "slider", label = "Range", path = {"Silent","Range"}, min = 1, max = 50}
 })
-CreateFolder(CombatTab, "TriggerBot", {}, {
+CreateFolder(CombatTab, "Trigger", {}, {
     {type = "toggle", label = "Enable", path = {"Trigger","Enabled"}},
     {type = "slider", label = "FOV", path = {"Trigger","FOV"}, min = 1, max = 180},
     {type = "slider", label = "Range", path = {"Trigger","Range"}, min = 1, max = 50},
@@ -610,27 +534,20 @@ CreateFolder(VisualsTab, "ESP", {}, {
     {type = "toggle", label = "Name", path = {"ESP","Name"}},
     {type = "toggle", label = "Health", path = {"ESP","Health"}},
     {type = "toggle", label = "Distance", path = {"ESP","Distance"}},
-    {type = "toggle", label = "Tracer", path = {"ESP","Tracer"}}
+    {type = "toggle", label = "Skeleton", path = {"ESP","Skeleton"}}
 })
 CreateFolder(VisualsTab, "Chams", {}, {
     {type = "toggle", label = "Enable", path = {"Chams","Enabled"}},
-    {type = "slider", label = "Transparency", path = {"Chams","Transparency"}, min = 0, max = 1, decimal = true},
-    {type = "color", label = "Color", path = {"Chams","Color"}}
+    {type = "slider", label = "Transparency", path = {"Chams","Transparency"}, min = 0, max = 1, decimal = true}
 })
-CreateFolder(VisualsTab, "Tracer", {}, {
-    {type = "toggle", label = "Enable", path = {"Tracer","Enabled"}},
-    {type = "slider", label = "Width", path = {"Tracer","Width"}, min = 1, max = 10},
-    {type = "slider", label = "Length", path = {"Tracer","Length"}, min = 1, max = 50},
-    {type = "color", label = "Color", path = {"Tracer","Color"}}
+CreateFolder(VisualsTab, "FOV Circle", {}, {
+    {type = "toggle", label = "Enable", path = {"FOVCircle","Enabled"}}
 })
 CreateFolder(VisualsTab, "World", {}, {
     {type = "toggle", label = "Fog", path = {"World","Fog","Enabled"}},
-    {type = "color", label = "Fog Color", path = {"World","Fog","Color"}},
     {type = "slider", label = "Fog Density", path = {"World","Fog","Density"}, min = 0, max = 1, decimal = true},
     {type = "toggle", label = "Sky", path = {"World","Sky","Enabled"}},
-    {type = "color", label = "Sky Color", path = {"World","Sky","Color"}},
-    {type = "toggle", label = "Ambient", path = {"World","Ambient","Enabled"}},
-    {type = "color", label = "Ambient Color", path = {"World","Ambient","Color"}}
+    {type = "toggle", label = "Ambient", path = {"World","Ambient","Enabled"}}
 })
 
 local MovementTab = SectionContents["Movement"]
@@ -675,26 +592,6 @@ end
 SectionButtons["Combat"].BackgroundColor3 = Color3.fromRGB(20,0,0)
 SectionButtons["Combat"].TextColor3 = Color3.fromRGB(255,0,0)
 
-function EnableESP()
-    if ESPActive then return end
-    ESPActive = true
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            CreateESPForPlayer(player)
-        end
-    end
-end
-
-function DisableESP()
-    ESPActive = false
-    for _, obj in pairs(ESPObjects) do
-        pcall(function() obj:Destroy() end)
-    end
-    ESPObjects = {}
-end
-
-local ESPObjects = {}
-
 function CreateESPForPlayer(player)
     local char = player.Character
     if not char then return end
@@ -714,13 +611,14 @@ function CreateESPForPlayer(player)
         box.Color3 = Color3.fromRGB(255,0,0)
         box.Transparency = 0.5
         box.AlwaysOnTop = true
+        box.ZIndex = 0
         box.Parent = espFolder
         table.insert(ESPObjects, box)
     end
     
     if Config.ESP.Name then
         local nameTag = Instance.new("BillboardGui")
-        nameTag.Size = UDim2.new(0,100,0,20)
+        nameTag.Size = UDim2.new(0,120,0,20)
         nameTag.Adornee = root
         nameTag.AlwaysOnTop = true
         nameTag.Parent = espFolder
@@ -775,16 +673,70 @@ function CreateESPForPlayer(player)
         table.insert(ESPObjects, distTag)
     end
     
-    if Config.ESP.Tracer then
-        local tracer = Instance.new("LineHandleAdornment")
-        tracer.Size = Vector3.new(1,1,1)
-        tracer.Adornee = root
-        tracer.Color3 = Color3.fromRGB(255,0,0)
-        tracer.Transparency = 0.5
-        tracer.AlwaysOnTop = true
-        tracer.Parent = espFolder
-        table.insert(ESPObjects, tracer)
+    if Config.ESP.Skeleton then
+        DrawSkeletonForPlayer(char)
     end
+end
+
+function DrawSkeletonForPlayer(char)
+    local parts = {
+        {"Head", "UpperTorso"},
+        {"UpperTorso", "LowerTorso"},
+        {"UpperTorso", "LeftUpperArm"},
+        {"UpperTorso", "RightUpperArm"},
+        {"LeftUpperArm", "LeftLowerArm"},
+        {"RightUpperArm", "RightLowerArm"},
+        {"LowerTorso", "LeftUpperLeg"},
+        {"LowerTorso", "RightUpperLeg"},
+        {"LeftUpperLeg", "LeftLowerLeg"},
+        {"RightUpperLeg", "RightLowerLeg"}
+    }
+    
+    for _, connection in ipairs(parts) do
+        local part1 = char:FindFirstChild(connection[1])
+        local part2 = char:FindFirstChild(connection[2])
+        if part1 and part2 then
+            local attachment1 = Instance.new("Attachment")
+            attachment1.Position = Vector3.new(0,0,0)
+            attachment1.Parent = part1
+            
+            local attachment2 = Instance.new("Attachment")
+            attachment2.Position = Vector3.new(0,0,0)
+            attachment2.Parent = part2
+            
+            local line = Instance.new("Beam")
+            line.Attachment0 = attachment1
+            line.Attachment1 = attachment2
+            line.Width0 = 0.1
+            line.Width1 = 0.1
+            line.Color = ColorSequence.new(Color3.fromRGB(255,0,0))
+            line.Transparency = NumberSequence.new(0)
+            line.Parent = char
+            table.insert(SkeletonLines, line)
+        end
+    end
+end
+
+function EnableESP()
+    if ESPActive then return end
+    ESPActive = true
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            if player.Character then CreateESPForPlayer(player) end
+        end
+    end
+end
+
+function DisableESP()
+    ESPActive = false
+    for _, obj in pairs(ESPObjects) do
+        pcall(function() obj:Destroy() end)
+    end
+    ESPObjects = {}
+    for _, line in pairs(SkeletonLines) do
+        pcall(function() line:Destroy() end)
+    end
+    SkeletonLines = {}
 end
 
 function EnableChams()
@@ -804,8 +756,6 @@ function DisableChams()
     end
     ChamsObjects = {}
 end
-
-local ChamsObjects = {}
 
 function CreateChamsForPlayer(player)
     local char = player.Character
@@ -831,9 +781,7 @@ function EnableFly()
     local char = LocalPlayer.Character
     if char then
         local humanoid = char:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid.PlatformStand = true
-        end
+        if humanoid then humanoid.PlatformStand = true end
     end
 end
 
@@ -842,13 +790,9 @@ function DisableFly()
     local char = LocalPlayer.Character
     if char then
         local humanoid = char:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid.PlatformStand = false
-        end
+        if humanoid then humanoid.PlatformStand = false end
         local root = char:FindFirstChild("HumanoidRootPart")
-        if root then
-            root.Velocity = Vector3.new(0,0,0)
-        end
+        if root then root.Velocity = Vector3.new(0,0,0) end
     end
 end
 
@@ -857,9 +801,7 @@ function EnableSpeed()
     local char = LocalPlayer.Character
     if char then
         local humanoid = char:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid.WalkSpeed = Config.Speed.Speed
-        end
+        if humanoid then humanoid.WalkSpeed = Config.Speed.Speed end
     end
 end
 
@@ -868,9 +810,7 @@ function DisableSpeed()
     local char = LocalPlayer.Character
     if char then
         local humanoid = char:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid.WalkSpeed = 16
-        end
+        if humanoid then humanoid.WalkSpeed = 16 end
     end
 end
 
@@ -888,10 +828,7 @@ local circleDragOffset = nil
 CircleButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
         circleDragging = true
-        circleDragOffset = Vector2.new(
-            input.Position.X - CircleButton.AbsolutePosition.X,
-            input.Position.Y - CircleButton.AbsolutePosition.Y
-        )
+        circleDragOffset = Vector2.new(input.Position.X - CircleButton.AbsolutePosition.X, input.Position.Y - CircleButton.AbsolutePosition.Y)
     end
 end)
 
@@ -903,10 +840,7 @@ end)
 
 UserInputService.InputChanged:Connect(function(input)
     if circleDragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
-        local newPos = UDim2.new(
-            0, input.Position.X - circleDragOffset.X,
-            0, input.Position.Y - circleDragOffset.Y
-        )
+        local newPos = UDim2.new(0, input.Position.X - circleDragOffset.X, 0, input.Position.Y - circleDragOffset.Y)
         CircleButton.Position = newPos
     end
 end)
@@ -915,7 +849,7 @@ CircleButton.MouseButton1Click:Connect(function()
     MenuOpen = not MenuOpen
     MainFrame.Visible = MenuOpen
     if MenuOpen then
-        if Config.AimBot.DrawFOV and Config.AimBot.Enabled then CreateFOVCircle() end
+        if Config.FOVCircle.Enabled then CreateFOVCircle() end
     else
         if FOVCircle then FOVCircle:Destroy() end
     end
@@ -925,7 +859,7 @@ CircleButton.TouchTap:Connect(function()
     MenuOpen = not MenuOpen
     MainFrame.Visible = MenuOpen
     if MenuOpen then
-        if Config.AimBot.DrawFOV and Config.AimBot.Enabled then CreateFOVCircle() end
+        if Config.FOVCircle.Enabled then CreateFOVCircle() end
     else
         if FOVCircle then FOVCircle:Destroy() end
     end
@@ -937,10 +871,7 @@ local titleDragOffset = nil
 TitleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
         titleDragging = true
-        titleDragOffset = Vector2.new(
-            input.Position.X - MainFrame.AbsolutePosition.X,
-            input.Position.Y - MainFrame.AbsolutePosition.Y
-        )
+        titleDragOffset = Vector2.new(input.Position.X - MainFrame.AbsolutePosition.X, input.Position.Y - MainFrame.AbsolutePosition.Y)
     end
 end)
 
@@ -952,10 +883,7 @@ end)
 
 UserInputService.InputChanged:Connect(function(input)
     if titleDragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
-        local newPos = UDim2.new(
-            0, input.Position.X - titleDragOffset.X,
-            0, input.Position.Y - titleDragOffset.Y
-        )
+        local newPos = UDim2.new(0, input.Position.X - titleDragOffset.X, 0, input.Position.Y - titleDragOffset.Y)
         MainFrame.Position = newPos
     end
 end)
@@ -1001,9 +929,9 @@ local function GetClosestPlayer()
     return closest
 end
 
-local function GetSilentTarget()
+local function GetClosestPlayerForTrigger()
     local closest = nil
-    local shortest = Config.Silent.FOV
+    local shortest = Config.Trigger.FOV
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local part = player.Character:FindFirstChild("Head")
@@ -1023,7 +951,6 @@ local function GetSilentTarget()
 end
 
 local triggerDelay = 0
-local oldCFrame = nil
 
 RunService.RenderStepped:Connect(function()
     if Config.AimBot.Enabled and not MenuOpen then
@@ -1044,35 +971,12 @@ RunService.RenderStepped:Connect(function()
         end
     end
     
-    if Config.Silent.Enabled and not MenuOpen then
-        local target = GetSilentTarget()
-        if target and target.Character then
-            local aimPart = target.Character:FindFirstChild(Config.Silent.AimPart) or target.Character:FindFirstChild("Head")
-            if aimPart then
-                local pos = Camera:WorldToViewportPoint(aimPart.Position)
-                local current = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                local targetPos = Vector2.new(pos.X, pos.Y)
-                local diff = targetPos - current
-                if diff.Magnitude < Config.Silent.FOV then
-                    SilentTarget = target
-                    local newCFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
-                    Camera.CFrame = newCFrame
-                end
-            end
-        end
-    end
-    
     if Config.Trigger.Enabled and not MenuOpen then
         triggerDelay = triggerDelay + 1
         if triggerDelay >= Config.Trigger.Delay then
             local target = GetClosestPlayerForTrigger()
             if target then
-                local args = {[1] = "MouseButton1Down"}
-                local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
-                if remote then pcall(function() remote:FireServer(unpack(args)) end) end
-                wait(0.05)
-                local args2 = {[1] = "MouseButton1Up"}
-                if remote then pcall(function() remote:FireServer(unpack(args2)) end) end
+                Mouse1Click()
                 triggerDelay = 0
             end
         end
@@ -1111,9 +1015,7 @@ RunService.RenderStepped:Connect(function()
     
     if SpeedActive and LocalPlayer.Character then
         local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid.WalkSpeed = Config.Speed.Speed
-        end
+        if humanoid then humanoid.WalkSpeed = Config.Speed.Speed end
     end
     
     if AntiAimActive and LocalPlayer.Character then
@@ -1156,6 +1058,12 @@ RunService.RenderStepped:Connect(function()
         Lighting.Ambient = Config.World.Ambient.Color
     end
     
+    if Config.FOVCircle.Enabled and MenuOpen then
+        CreateFOVCircle()
+    elseif not Config.FOVCircle.Enabled then
+        if FOVCircle then FOVCircle:Destroy() end
+    end
+    
     if Config.Watermark.Enabled then
         local frameTime = tick() - LastFrameTime
         LastFrameTime = tick()
@@ -1164,8 +1072,8 @@ RunService.RenderStepped:Connect(function()
 end)
 
 local Watermark = Instance.new("TextLabel")
-Watermark.Size = UDim2.new(0, 180, 0, 20)
-Watermark.Position = UDim2.new(0.5, -90, 0, 5)
+Watermark.Size = UDim2.new(0, 200, 0, 20)
+Watermark.Position = UDim2.new(0.5, -100, 0, 5)
 Watermark.BackgroundColor3 = Color3.fromRGB(0,0,0)
 Watermark.BackgroundTransparency = 0.3
 Watermark.TextColor3 = Color3.fromRGB(255,0,0)
@@ -1187,6 +1095,13 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-if Config.AimBot.DrawFOV and Config.AimBot.Enabled then CreateFOVCircle() end
+function Mouse1Click()
+    local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
+    if remote then
+        pcall(function() remote:FireServer("MouseButton1Down") end)
+        wait(0.05)
+        pcall(function() remote:FireServer("MouseButton1Up") end)
+    end
+end
 
 print("Hiruku Internal Loaded! Press H to open menu")
