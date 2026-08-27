@@ -35,7 +35,6 @@ local SpeedActive = false
 local AntiAimActive = false
 local CurrentFPS = 0
 local LastFrameTime = tick()
-local SelectedSection = "Combat"
 local FOVCircle = nil
 local ESPObjects = {}
 local ChamsObjects = {}
@@ -46,183 +45,195 @@ ScreenGui.Name = "HirukuInternal"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
-local CircleButton = Instance.new("ImageButton")
-CircleButton.Size = UDim2.new(0, 40, 0, 40)
-CircleButton.Position = UDim2.new(0.02, 0, 0.5, -20)
-CircleButton.BackgroundColor3 = Color3.fromRGB(0,0,0)
-CircleButton.BackgroundTransparency = 0
-CircleButton.BorderSizePixel = 2
-CircleButton.BorderColor3 = Color3.fromRGB(255,255,255)
-CircleButton.Image = "rbxassetid://0"
+local CircleButton = Instance.new("TextButton")
+CircleButton.Size = UDim2.new(0, 45, 0, 45)
+CircleButton.Position = UDim2.new(0.02, 0, 0.5, -22)
+CircleButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+CircleButton.Text = "H"
+CircleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CircleButton.TextScaled = true
+CircleButton.Font = Enum.Font.Code
+CircleButton.BorderSizePixel = 1
+CircleButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
 CircleButton.AutoButtonColor = false
 CircleButton.Parent = ScreenGui
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(1,0)
-corner.Parent = CircleButton
-
-local CircleInner = Instance.new("ImageLabel")
-CircleInner.Size = UDim2.new(1,-6,1,-6)
-CircleInner.Position = UDim2.new(0,3,0,3)
-CircleInner.BackgroundColor3 = Color3.fromRGB(10,10,10)
-CircleInner.BackgroundTransparency = 0
-CircleInner.BorderSizePixel = 0
-CircleInner.Image = "rbxassetid://0"
-CircleInner.Parent = CircleButton
-
-local innerCorner = Instance.new("UICorner")
-innerCorner.CornerRadius = UDim.new(1,0)
-innerCorner.Parent = CircleInner
-
-local HirukuText = Instance.new("TextLabel")
-HirukuText.Size = UDim2.new(1,0,1,0)
-HirukuText.BackgroundTransparency = 1
-HirukuText.Text = "H"
-HirukuText.TextColor3 = Color3.fromRGB(255,255,255)
-HirukuText.TextScaled = true
-HirukuText.Font = Enum.Font.Code
-HirukuText.Parent = CircleInner
-
-local function CreateFOVCircle()
-    if FOVCircle then FOVCircle:Destroy() end
-    FOVCircle = Instance.new("ImageLabel")
-    FOVCircle.Size = UDim2.new(0, Config.AimBot.FOV * 2, 0, Config.AimBot.FOV * 2)
-    FOVCircle.Position = UDim2.new(0.5, -Config.AimBot.FOV, 0.5, -Config.AimBot.FOV)
-    FOVCircle.BackgroundTransparency = 1
-    FOVCircle.Image = "rbxassetid://0"
-    FOVCircle.BackgroundColor3 = Color3.fromRGB(255,255,255)
-    FOVCircle.BackgroundTransparency = 0.85
-    FOVCircle.BorderSizePixel = 2
-    FOVCircle.BorderColor3 = Color3.fromRGB(255,255,255)
-    FOVCircle.ZIndex = 0
-    FOVCircle.Parent = ScreenGui
-    
-    local fovCorner = Instance.new("UICorner")
-    fovCorner.CornerRadius = UDim.new(1,0)
-    fovCorner.Parent = FOVCircle
-end
+local circleCorner = Instance.new("UICorner")
+circleCorner.CornerRadius = UDim.new(1, 0)
+circleCorner.Parent = CircleButton
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 420, 0, 320)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -160)
-MainFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+MainFrame.Size = UDim2.new(0, 700, 0, 500)
+MainFrame.Position = UDim2.new(0.5, -350, 0.5, -250)
+MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 1
-MainFrame.BorderColor3 = Color3.fromRGB(255,255,255)
+MainFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
 MainFrame.Visible = false
-MainFrame.Active = true
-MainFrame.Draggable = false
-MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 8)
+mainCorner.Parent = MainFrame
+
 local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1,0,0,30)
-TitleBar.BackgroundColor3 = Color3.fromRGB(10,10,10)
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 TitleBar.BorderSizePixel = 0
-TitleBar.BorderColor3 = Color3.fromRGB(255,255,255)
 TitleBar.Parent = MainFrame
 
 local TitleText = Instance.new("TextLabel")
-TitleText.Size = UDim2.new(1,-35,1,0)
-TitleText.Position = UDim2.new(0,5,0,0)
+TitleText.Size = UDim2.new(1, -40, 1, 0)
+TitleText.Position = UDim2.new(0, 15, 0, 0)
 TitleText.BackgroundTransparency = 1
 TitleText.Text = "Hiruku"
-TitleText.TextColor3 = Color3.fromRGB(255,255,255)
+TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
-TitleText.TextScaled = true
+TitleText.TextScaled = false
 TitleText.Font = Enum.Font.Code
+TitleText.TextSize = 20
 TitleText.Parent = TitleBar
 
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0,22,0,22)
-CloseBtn.Position = UDim2.new(1,-26,0,4)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(20,20,20)
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -35, 0, 5)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = Color3.fromRGB(255,255,255)
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.TextScaled = true
 CloseBtn.Font = Enum.Font.Code
 CloseBtn.BorderSizePixel = 0
 CloseBtn.Parent = TitleBar
 
 local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0,3)
+closeCorner.CornerRadius = UDim.new(0, 5)
 closeCorner.Parent = CloseBtn
 
-local TabBar = Instance.new("Frame")
-TabBar.Size = UDim2.new(1,0,0,25)
-TabBar.Position = UDim2.new(0,0,0,30)
-TabBar.BackgroundColor3 = Color3.fromRGB(5,5,5)
-TabBar.BorderSizePixel = 0
-TabBar.Parent = MainFrame
+local Tabs = Instance.new("Frame")
+Tabs.Size = UDim2.new(0, 170, 1, -40)
+Tabs.Position = UDim2.new(0, 0, 0, 40)
+Tabs.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
+Tabs.BorderSizePixel = 0
+Tabs.Parent = MainFrame
+
+local ContentArea = Instance.new("ScrollingFrame")
+ContentArea.Size = UDim2.new(1, -180, 1, -40)
+ContentArea.Position = UDim2.new(0, 180, 0, 40)
+ContentArea.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+ContentArea.BorderSizePixel = 0
+ContentArea.ScrollBarThickness = 4
+ContentArea.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
+ContentArea.Parent = MainFrame
+
+local UILayout = Instance.new("UIListLayout")
+UILayout.SortOrder = Enum.SortOrder.LayoutOrder
+UILayout.Padding = UDim.new(0, 8)
+UILayout.Parent = ContentArea
 
 local Sections = {"Combat", "Visuals", "Movement", "Misc"}
-local SectionButtons = {}
-local SectionContents = {}
+local SectionIconIds = {
+    Combat = "rbxassetid://6031094667",
+    Visuals = "rbxassetid://6031094667",
+    Movement = "rbxassetid://6031094667",
+    Misc = "rbxassetid://6031094667"
+}
+
+local function CreateIcon(id)
+    local icon = Instance.new("ImageLabel")
+    icon.Size = UDim2.new(0, 20, 0, 20)
+    icon.BackgroundTransparency = 1
+    icon.Image = id
+    icon.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    icon.ScaleType = Enum.ScaleType.Fit
+    return icon
+end
+
+local TabsList = Instance.new("UIListLayout")
+TabsList.SortOrder = Enum.SortOrder.LayoutOrder
+TabsList.Padding = UDim.new(0, 5)
+TabsList.Parent = Tabs
+
+local TabButtons = {}
 
 for i, name in ipairs(Sections) do
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.25,0,1,0)
-    btn.Position = UDim2.new((i-1)*0.25,0,0,0)
-    btn.BackgroundColor3 = Color3.fromRGB(5,5,5)
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(150,150,150)
-    btn.TextScaled = true
+    btn.Size = UDim2.new(0, 160, 0, 45)
+    btn.Position = UDim2.new(0, 5, 0, (i-1) * 50)
+    btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.TextScaled = false
     btn.Font = Enum.Font.Code
-    btn.BorderSizePixel = 0
-    btn.Parent = TabBar
-    SectionButtons[name] = btn
+    btn.TextSize = 14
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = Color3.fromRGB(30, 30, 30)
+    btn.Parent = Tabs
+    TabButtons[name] = btn
     
-    local content = Instance.new("ScrollingFrame")
-    content.Size = UDim2.new(1,0,1,-55)
-    content.Position = UDim2.new(0,0,0,55)
-    content.BackgroundColor3 = Color3.fromRGB(0,0,0)
-    content.BackgroundTransparency = 0
-    content.BorderSizePixel = 0
-    content.ScrollBarThickness = 3
-    content.ScrollBarImageColor3 = Color3.fromRGB(255,255,255)
-    content.Visible = (i == 1)
-    content.CanvasSize = UDim2.new(0,0,0,0)
-    content.Parent = MainFrame
-    SectionContents[name] = content
+    local tabCorner = Instance.new("UICorner")
+    tabCorner.CornerRadius = UDim.new(0, 5)
+    tabCorner.Parent = btn
+    
+    local icon = CreateIcon(SectionIconIds[name])
+    icon.Position = UDim2.new(0, 8, 0.5, -10)
+    icon.Parent = btn
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -35, 1, 0)
+    label.Position = UDim2.new(0, 35, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextScaled = false
+    label.Font = Enum.Font.Code
+    label.TextSize = 14
+    label.Parent = btn
 end
 
 local function CreateFolder(parent, title, options)
     local folder = Instance.new("Frame")
-    folder.Size = UDim2.new(1,0,0,28)
-    folder.Position = UDim2.new(0,0,0,#parent:GetChildren()*30)
-    folder.BackgroundColor3 = Color3.fromRGB(8,8,8)
+    folder.Size = UDim2.new(1, 0, 0, 40)
+    folder.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     folder.BorderSizePixel = 1
-    folder.BorderColor3 = Color3.fromRGB(20,20,20)
-    folder.ClipsDescendants = true
+    folder.BorderColor3 = Color3.fromRGB(30, 30, 30)
     folder.Parent = parent
     
+    local folderCorner = Instance.new("UICorner")
+    folderCorner.CornerRadius = UDim.new(0, 5)
+    folderCorner.Parent = folder
+    
     local header = Instance.new("TextButton")
-    header.Size = UDim2.new(1,0,1,0)
-    header.BackgroundColor3 = Color3.fromRGB(8,8,8)
+    header.Size = UDim2.new(1, 0, 1, 0)
+    header.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     header.Text = title
-    header.TextColor3 = Color3.fromRGB(255,255,255)
+    header.TextColor3 = Color3.fromRGB(255, 255, 255)
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.TextScaled = false
     header.Font = Enum.Font.Code
-    header.TextSize = 12
+    header.TextSize = 14
     header.BorderSizePixel = 0
     header.Parent = folder
     
     local arrow = Instance.new("TextLabel")
-    arrow.Size = UDim2.new(0,18,1,0)
-    arrow.Position = UDim2.new(1,-18,0,0)
+    arrow.Size = UDim2.new(0, 20, 1, 0)
+    arrow.Position = UDim2.new(1, -20, 0, 0)
     arrow.BackgroundTransparency = 1
     arrow.Text = "▼"
-    arrow.TextColor3 = Color3.fromRGB(255,255,255)
+    arrow.TextColor3 = Color3.fromRGB(255, 255, 255)
     arrow.TextScaled = true
     arrow.Font = Enum.Font.Code
     arrow.Parent = header
     
     local content = Instance.new("Frame")
-    content.Size = UDim2.new(1,0,0,0)
-    content.Position = UDim2.new(0,0,0,28)
+    content.Size = UDim2.new(1, 0, 0, 0)
+    content.Position = UDim2.new(0, 0, 0, 40)
     content.BackgroundTransparency = 1
     content.Parent = folder
+    
+    local contentLayout = Instance.new("UIListLayout")
+    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    contentLayout.Padding = UDim.new(0, 2)
+    contentLayout.Parent = content
     
     local expanded = false
     
@@ -231,22 +242,13 @@ local function CreateFolder(parent, title, options)
         for _, child in ipairs(content:GetChildren()) do
             if child:IsA("Frame") then childCount = childCount + 1 end
         end
-        content.Size = UDim2.new(1,0,0, childCount * 24)
-        folder.Size = UDim2.new(1,0,0, 28 + childCount * 24)
         if expanded then
+            folder.Size = UDim2.new(1, 0, 0, 40 + childCount * 30)
             arrow.Text = "▲"
         else
+            folder.Size = UDim2.new(1, 0, 0, 40)
             arrow.Text = "▼"
-            content.Size = UDim2.new(1,0,0,0)
-            folder.Size = UDim2.new(1,0,0,28)
         end
-        local totalHeight = 0
-        for _, child in ipairs(parent:GetChildren()) do
-            if child:IsA("Frame") then
-                totalHeight = totalHeight + child.Size.Y.Offset + 2
-            end
-        end
-        parent.CanvasSize = UDim2.new(0,0,0, totalHeight + 10)
     end
     
     header.MouseButton1Click:Connect(function()
@@ -257,52 +259,52 @@ local function CreateFolder(parent, title, options)
     for _, opt in ipairs(options) do
         if opt.type == "toggle" then
             local holder = Instance.new("Frame")
-            holder.Size = UDim2.new(1,0,0,24)
+            holder.Size = UDim2.new(1, 0, 0, 30)
             holder.BackgroundTransparency = 1
             holder.Parent = content
             
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.55,0,1,0)
-            label.Position = UDim2.new(0,8,0,0)
+            label.Size = UDim2.new(0.65, 0, 1, 0)
+            label.Position = UDim2.new(0, 5, 0, 0)
             label.BackgroundTransparency = 1
             label.Text = opt.label
-            label.TextColor3 = Color3.fromRGB(200,200,200)
+            label.TextColor3 = Color3.fromRGB(200, 200, 200)
             label.TextXAlignment = Enum.TextXAlignment.Left
             label.TextScaled = false
             label.Font = Enum.Font.Code
-            label.TextSize = 11
+            label.TextSize = 13
             label.Parent = holder
             
             local toggle = Instance.new("Frame")
-            toggle.Size = UDim2.new(0,28,0,12)
-            toggle.Position = UDim2.new(0.82,0,0.25,0)
-            toggle.BackgroundColor3 = Color3.fromRGB(30,30,30)
+            toggle.Size = UDim2.new(0, 40, 0, 20)
+            toggle.Position = UDim2.new(0.75, 0, 0.2, 0)
+            toggle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
             toggle.BorderSizePixel = 1
-            toggle.BorderColor3 = Color3.fromRGB(255,255,255)
+            toggle.BorderColor3 = Color3.fromRGB(80, 80, 80)
             toggle.Parent = holder
             
             local toggleCorner = Instance.new("UICorner")
-            toggleCorner.CornerRadius = UDim.new(1,0)
+            toggleCorner.CornerRadius = UDim.new(1, 0)
             toggleCorner.Parent = toggle
             
             local check = Instance.new("Frame")
-            check.Size = UDim2.new(0,10,0,10)
-            check.Position = UDim2.new(0,1,0,1)
-            check.BackgroundColor3 = Color3.fromRGB(255,255,255)
+            check.Size = UDim2.new(0, 16, 0, 16)
+            check.Position = UDim2.new(0, 2, 0, 2)
+            check.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             check.BorderSizePixel = 0
             check.Parent = toggle
             
             local checkCorner = Instance.new("UICorner")
-            checkCorner.CornerRadius = UDim.new(1,0)
+            checkCorner.CornerRadius = UDim.new(1, 0)
             checkCorner.Parent = check
             
             local function updateToggle()
                 local current = Config
                 for _, v in ipairs(opt.path) do current = current[v] end
                 if current then
-                    TweenService:Create(check, TweenInfo.new(0.2), {Position = UDim2.new(0,17,0,1)}):Play()
+                    TweenService:Create(check, TweenInfo.new(0.2), {Position = UDim2.new(0, 22, 0, 2)}):Play()
                 else
-                    TweenService:Create(check, TweenInfo.new(0.2), {Position = UDim2.new(0,1,0,1)}):Play()
+                    TweenService:Create(check, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0, 2)}):Play()
                 end
             end
             updateToggle()
@@ -332,60 +334,60 @@ local function CreateFolder(parent, title, options)
             end)
         elseif opt.type == "slider" then
             local holder = Instance.new("Frame")
-            holder.Size = UDim2.new(1,0,0,24)
+            holder.Size = UDim2.new(1, 0, 0, 30)
             holder.BackgroundTransparency = 1
             holder.Parent = content
             
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.35,0,1,0)
-            label.Position = UDim2.new(0,8,0,0)
+            label.Size = UDim2.new(0.4, 0, 1, 0)
+            label.Position = UDim2.new(0, 5, 0, 0)
             label.BackgroundTransparency = 1
             label.Text = opt.label
-            label.TextColor3 = Color3.fromRGB(200,200,200)
+            label.TextColor3 = Color3.fromRGB(200, 200, 200)
             label.TextXAlignment = Enum.TextXAlignment.Left
             label.TextScaled = false
             label.Font = Enum.Font.Code
-            label.TextSize = 11
+            label.TextSize = 13
             label.Parent = holder
             
             local val = Instance.new("TextLabel")
-            val.Size = UDim2.new(0.1,0,1,0)
-            val.Position = UDim2.new(0.38,0,0,0)
+            val.Size = UDim2.new(0.15, 0, 1, 0)
+            val.Position = UDim2.new(0.45, 0, 0, 0)
             val.BackgroundTransparency = 1
             val.Text = "0"
-            val.TextColor3 = Color3.fromRGB(255,255,255)
+            val.TextColor3 = Color3.fromRGB(255, 255, 255)
             val.TextScaled = false
             val.Font = Enum.Font.Code
-            val.TextSize = 11
+            val.TextSize = 13
             val.Parent = holder
             
             local slider = Instance.new("Frame")
-            slider.Size = UDim2.new(0.32,0,0.2,0)
-            slider.Position = UDim2.new(0.62,0,0.4,0)
-            slider.BackgroundColor3 = Color3.fromRGB(30,30,30)
+            slider.Size = UDim2.new(0.25, 0, 0.2, 0)
+            slider.Position = UDim2.new(0.65, 0, 0.4, 0)
+            slider.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
             slider.BorderSizePixel = 1
-            slider.BorderColor3 = Color3.fromRGB(255,255,255)
+            slider.BorderColor3 = Color3.fromRGB(80, 80, 80)
             slider.Parent = holder
             
             local sliderCorner = Instance.new("UICorner")
-            sliderCorner.CornerRadius = UDim.new(1,0)
+            sliderCorner.CornerRadius = UDim.new(1, 0)
             sliderCorner.Parent = slider
             
             local fill = Instance.new("Frame")
-            fill.Size = UDim2.new(0.5,0,1,0)
-            fill.BackgroundColor3 = Color3.fromRGB(255,255,255)
+            fill.Size = UDim2.new(0.5, 0, 1, 0)
+            fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             fill.BorderSizePixel = 0
             fill.Parent = slider
             
             local fillCorner = Instance.new("UICorner")
-            fillCorner.CornerRadius = UDim.new(1,0)
+            fillCorner.CornerRadius = UDim.new(1, 0)
             fillCorner.Parent = fill
             
             local function updateSlider()
                 local current = Config
                 for _, v in ipairs(opt.path) do current = current[v] end
                 local percent = (current - opt.min) / (opt.max - opt.min)
-                fill.Size = UDim2.new(math.clamp(percent,0,1),0,1,0)
+                fill.Size = UDim2.new(math.clamp(percent,0,1), 0, 1, 0)
                 if opt.decimal then
                     val.Text = string.format("%.2f", current)
                 else
@@ -430,36 +432,36 @@ local function CreateFolder(parent, title, options)
             end)
         elseif opt.type == "dropdown" then
             local holder = Instance.new("Frame")
-            holder.Size = UDim2.new(1,0,0,24)
+            holder.Size = UDim2.new(1, 0, 0, 30)
             holder.BackgroundTransparency = 1
             holder.Parent = content
             
             local label = Instance.new("TextLabel")
-            label.Size = UDim2.new(0.35,0,1,0)
-            label.Position = UDim2.new(0,8,0,0)
+            label.Size = UDim2.new(0.4, 0, 1, 0)
+            label.Position = UDim2.new(0, 5, 0, 0)
             label.BackgroundTransparency = 1
             label.Text = opt.label
-            label.TextColor3 = Color3.fromRGB(200,200,200)
+            label.TextColor3 = Color3.fromRGB(200, 200, 200)
             label.TextXAlignment = Enum.TextXAlignment.Left
             label.TextScaled = false
             label.Font = Enum.Font.Code
-            label.TextSize = 11
+            label.TextSize = 13
             label.Parent = holder
             
             local dropdown = Instance.new("TextButton")
-            dropdown.Size = UDim2.new(0.35,0,0.7,0)
-            dropdown.Position = UDim2.new(0.6,0,0.15,0)
-            dropdown.BackgroundColor3 = Color3.fromRGB(20,20,20)
-            dropdown.TextColor3 = Color3.fromRGB(255,255,255)
+            dropdown.Size = UDim2.new(0.25, 0, 0.7, 0)
+            dropdown.Position = UDim2.new(0.65, 0, 0.15, 0)
+            dropdown.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+            dropdown.TextColor3 = Color3.fromRGB(255, 255, 255)
             dropdown.TextScaled = false
             dropdown.Font = Enum.Font.Code
-            dropdown.TextSize = 11
+            dropdown.TextSize = 12
             dropdown.BorderSizePixel = 1
-            dropdown.BorderColor3 = Color3.fromRGB(255,255,255)
+            dropdown.BorderColor3 = Color3.fromRGB(80, 80, 80)
             dropdown.Parent = holder
             
             local dropCorner = Instance.new("UICorner")
-            dropCorner.CornerRadius = UDim.new(0,2)
+            dropCorner.CornerRadius = UDim.new(0, 2)
             dropCorner.Parent = dropdown
             
             local current = Config
@@ -468,17 +470,17 @@ local function CreateFolder(parent, title, options)
             
             local expanded = false
             local optionFrame = Instance.new("Frame")
-            optionFrame.Size = UDim2.new(0.35,0,0,0)
-            optionFrame.Position = UDim2.new(0.6,0,0.85,0)
-            optionFrame.BackgroundColor3 = Color3.fromRGB(10,10,10)
+            optionFrame.Size = UDim2.new(0.25, 0, 0, 0)
+            optionFrame.Position = UDim2.new(0.65, 0, 0.85, 0)
+            optionFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
             optionFrame.BorderSizePixel = 1
-            optionFrame.BorderColor3 = Color3.fromRGB(255,255,255)
+            optionFrame.BorderColor3 = Color3.fromRGB(80, 80, 80)
             optionFrame.Visible = false
             optionFrame.ClipsDescendants = true
             optionFrame.Parent = holder
             
             local optCorner = Instance.new("UICorner")
-            optCorner.CornerRadius = UDim.new(0,2)
+            optCorner.CornerRadius = UDim.new(0, 2)
             optCorner.Parent = optionFrame
             
             local function updateOptions()
@@ -487,14 +489,14 @@ local function CreateFolder(parent, title, options)
                 end
                 for i, option in ipairs(opt.options) do
                     local btn = Instance.new("TextButton")
-                    btn.Size = UDim2.new(1,0,0,18)
-                    btn.Position = UDim2.new(0,0,0,(i-1)*18)
-                    btn.BackgroundColor3 = Color3.fromRGB(15,15,15)
+                    btn.Size = UDim2.new(1, 0, 0, 22)
+                    btn.Position = UDim2.new(0, 0, 0, (i-1) * 22)
+                    btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
                     btn.Text = option
-                    btn.TextColor3 = Color3.fromRGB(255,255,255)
+                    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
                     btn.TextScaled = false
                     btn.Font = Enum.Font.Code
-                    btn.TextSize = 11
+                    btn.TextSize = 12
                     btn.BorderSizePixel = 0
                     btn.Parent = optionFrame
                     
@@ -505,10 +507,10 @@ local function CreateFolder(parent, title, options)
                         dropdown.Text = option
                         expanded = false
                         optionFrame.Visible = false
-                        optionFrame.Size = UDim2.new(0.35,0,0,0)
+                        optionFrame.Size = UDim2.new(0.25, 0, 0, 0)
                     end)
                 end
-                optionFrame.Size = UDim2.new(0.35,0,0,#opt.options*18)
+                optionFrame.Size = UDim2.new(0.25, 0, 0, #opt.options * 22)
             end
             updateOptions()
             
@@ -516,9 +518,9 @@ local function CreateFolder(parent, title, options)
                 expanded = not expanded
                 optionFrame.Visible = expanded
                 if expanded then
-                    optionFrame.Size = UDim2.new(0.35,0,0,#opt.options*18)
+                    optionFrame.Size = UDim2.new(0.25, 0, 0, #opt.options * 22)
                 else
-                    optionFrame.Size = UDim2.new(0.35,0,0,0)
+                    optionFrame.Size = UDim2.new(0.25, 0, 0, 0)
                 end
             end)
         end
@@ -528,7 +530,11 @@ local function CreateFolder(parent, title, options)
     return folder
 end
 
-local CombatTab = SectionContents["Combat"]
+local CombatTab = Instance.new("Frame")
+CombatTab.Size = UDim2.new(1, 0, 1, 0)
+CombatTab.BackgroundTransparency = 1
+CombatTab.Parent = ContentArea
+
 CreateFolder(CombatTab, "AimBot", {
     {type = "toggle", label = "Enable", path = {"AimBot","Enabled"}},
     {type = "slider", label = "FOV", path = {"AimBot","FOV"}, min = 1, max = 180},
@@ -548,7 +554,12 @@ CreateFolder(CombatTab, "Trigger", {
     {type = "slider", label = "Delay", path = {"Trigger","Delay"}, min = 10, max = 500}
 })
 
-local VisualsTab = SectionContents["Visuals"]
+local VisualsTab = Instance.new("Frame")
+VisualsTab.Size = UDim2.new(1, 0, 1, 0)
+VisualsTab.BackgroundTransparency = 1
+VisualsTab.Visible = false
+VisualsTab.Parent = ContentArea
+
 CreateFolder(VisualsTab, "ESP", {
     {type = "toggle", label = "Enable", path = {"ESP","Enabled"}},
     {type = "toggle", label = "Box", path = {"ESP","Box"}},
@@ -571,7 +582,12 @@ CreateFolder(VisualsTab, "World", {
     {type = "toggle", label = "Ambient", path = {"World","Ambient","Enabled"}}
 })
 
-local MovementTab = SectionContents["Movement"]
+local MovementTab = Instance.new("Frame")
+MovementTab.Size = UDim2.new(1, 0, 1, 0)
+MovementTab.BackgroundTransparency = 1
+MovementTab.Visible = false
+MovementTab.Parent = ContentArea
+
 CreateFolder(MovementTab, "Speed", {
     {type = "toggle", label = "Enable", path = {"Speed","Enabled"}},
     {type = "slider", label = "Speed", path = {"Speed","Speed"}, min = 10, max = 200}
@@ -584,7 +600,12 @@ CreateFolder(MovementTab, "Bunny Hop", {
     {type = "toggle", label = "Enable", path = {"BunnyHop","Enabled"}}
 })
 
-local MiscTab = SectionContents["Misc"]
+local MiscTab = Instance.new("Frame")
+MiscTab.Size = UDim2.new(1, 0, 1, 0)
+MiscTab.BackgroundTransparency = 1
+MiscTab.Visible = false
+MiscTab.Parent = ContentArea
+
 CreateFolder(MiscTab, "Anti-Aim", {
     {type = "toggle", label = "Enable", path = {"AntiAim","Enabled"}},
     {type = "dropdown", label = "Mode", path = {"AntiAim","Mode"}, options = {"Jitter","Spin","Backwards"}},
@@ -595,23 +616,46 @@ CreateFolder(MiscTab, "Watermark", {
     {type = "toggle", label = "Enable", path = {"Watermark","Enabled"}}
 })
 
-for name, btn in pairs(SectionButtons) do
+for name, btn in pairs(TabButtons) do
     btn.MouseButton1Click:Connect(function()
-        for _, content in pairs(SectionContents) do
-            content.Visible = false
+        CombatTab.Visible = false
+        VisualsTab.Visible = false
+        MovementTab.Visible = false
+        MiscTab.Visible = false
+        if name == "Combat" then CombatTab.Visible = true end
+        if name == "Visuals" then VisualsTab.Visible = true end
+        if name == "Movement" then MovementTab.Visible = true end
+        if name == "Misc" then MiscTab.Visible = true end
+        for _, b in pairs(TabButtons) do
+            b.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+            b.TextColor3 = Color3.fromRGB(150, 150, 150)
         end
-        SectionContents[name].Visible = true
-        for _, b in pairs(SectionButtons) do
-            b.BackgroundColor3 = Color3.fromRGB(5,5,5)
-            b.TextColor3 = Color3.fromRGB(150,150,150)
-        end
-        btn.BackgroundColor3 = Color3.fromRGB(20,20,20)
-        btn.TextColor3 = Color3.fromRGB(255,255,255)
+        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     end)
 end
 
-SectionButtons["Combat"].BackgroundColor3 = Color3.fromRGB(20,20,20)
-SectionButtons["Combat"].TextColor3 = Color3.fromRGB(255,255,255)
+TabButtons["Combat"].BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TabButtons["Combat"].TextColor3 = Color3.fromRGB(255, 255, 255)
+
+function CreateFOVCircle()
+    if FOVCircle then FOVCircle:Destroy() end
+    FOVCircle = Instance.new("ImageLabel")
+    FOVCircle.Size = UDim2.new(0, Config.AimBot.FOV * 2, 0, Config.AimBot.FOV * 2)
+    FOVCircle.Position = UDim2.new(0.5, -Config.AimBot.FOV, 0.5, -Config.AimBot.FOV)
+    FOVCircle.BackgroundTransparency = 1
+    FOVCircle.Image = "rbxassetid://0"
+    FOVCircle.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    FOVCircle.BackgroundTransparency = 0.85
+    FOVCircle.BorderSizePixel = 2
+    FOVCircle.BorderColor3 = Color3.fromRGB(255,255,255)
+    FOVCircle.ZIndex = 0
+    FOVCircle.Parent = ScreenGui
+    
+    local fovCorner = Instance.new("UICorner")
+    fovCorner.CornerRadius = UDim.new(1,0)
+    fovCorner.Parent = FOVCircle
+end
 
 function CreateESPForPlayer(player)
     local char = player.Character
