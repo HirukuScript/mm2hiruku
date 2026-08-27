@@ -6,7 +6,6 @@ local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
 
 local Config = {
     AimBot = {Enabled = false, FOV = 35, Smooth = 0.45, Range = 15, AimPart = "Head"},
@@ -48,8 +47,8 @@ ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
 local CircleButton = Instance.new("TextButton")
-CircleButton.Size = UDim2.new(0, 65, 0, 65)
-CircleButton.Position = UDim2.new(0.02, 0, 0.5, -32)
+CircleButton.Size = UDim2.new(0, 60, 0, 60)
+CircleButton.Position = UDim2.new(0.02, 0, 0.5, -30)
 CircleButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 CircleButton.Text = "H"
 CircleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -64,9 +63,10 @@ local circleCorner = Instance.new("UICorner")
 circleCorner.CornerRadius = UDim.new(1, 0)
 circleCorner.Parent = CircleButton
 
+-- Меню стало меньше (450x360)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 600, 0, 450)
-MainFrame.Position = UDim2.new(0.5, -300, 0.5, -225)
+MainFrame.Size = UDim2.new(0, 450, 0, 360)
+MainFrame.Position = UDim2.new(0.5, -225, 0.5, -180)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 1
@@ -79,7 +79,7 @@ mainCorner.CornerRadius = UDim.new(0, 8)
 mainCorner.Parent = MainFrame
 
 local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.Size = UDim2.new(1, 0, 0, 35)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 TitleBar.BorderSizePixel = 0
 TitleBar.Parent = MainFrame
@@ -98,7 +98,7 @@ TitleText.Parent = TitleBar
 
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0, 28, 0, 28)
-CloseBtn.Position = UDim2.new(1, -33, 0, 6)
+CloseBtn.Position = UDim2.new(1, -33, 0, 3)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
 CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -112,15 +112,15 @@ closeCorner.CornerRadius = UDim.new(0, 5)
 closeCorner.Parent = CloseBtn
 
 local Tabs = Instance.new("Frame")
-Tabs.Size = UDim2.new(0, 140, 1, -40)
-Tabs.Position = UDim2.new(0, 0, 0, 40)
+Tabs.Size = UDim2.new(0, 110, 1, -35)
+Tabs.Position = UDim2.new(0, 0, 0, 35)
 Tabs.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
 Tabs.BorderSizePixel = 0
 Tabs.Parent = MainFrame
 
 local ContentArea = Instance.new("ScrollingFrame")
-ContentArea.Size = UDim2.new(1, -150, 1, -40)
-ContentArea.Position = UDim2.new(0, 150, 0, 40)
+ContentArea.Size = UDim2.new(1, -120, 1, -35)
+ContentArea.Position = UDim2.new(0, 120, 0, 35)
 ContentArea.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 ContentArea.BorderSizePixel = 0
 ContentArea.ScrollBarThickness = 4
@@ -145,14 +145,13 @@ local AllTabs = {}
 
 for i, name in ipairs(Sections) do
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 130, 0, 40)
-    btn.Position = UDim2.new(0, 5, 0, (i-1) * 45)
+    btn.Size = UDim2.new(0, 100, 0, 35)
+    btn.Position = UDim2.new(0, 5, 0, (i-1) * 40)
     btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    btn.Text = name
+    -- Убрал дублирующий текст с самой кнопки!
+    btn.Text = "" 
     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    btn.TextScaled = false
     btn.Font = Enum.Font.Code
-    btn.TextSize = 13
     btn.BorderSizePixel = 1
     btn.BorderColor3 = Color3.fromRGB(30, 30, 30)
     btn.Parent = Tabs
@@ -225,7 +224,7 @@ end
 
 local function CreateToggle(parent, label, path, yPos)
     local holder = Instance.new("Frame")
-    holder.Size = UDim2.new(1, 0, 0, 28)
+    holder.Size = UDim2.new(1, 0, 0, 26)
     holder.Position = UDim2.new(0, 10, 0, yPos)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
@@ -243,7 +242,7 @@ local function CreateToggle(parent, label, path, yPos)
     text.Parent = holder
     
     local toggle = Instance.new("Frame")
-    toggle.Size = UDim2.new(0, 36, 0, 18)
+    toggle.Size = UDim2.new(0, 32, 0, 16)
     toggle.Position = UDim2.new(0.82, 0, 0.2, 0)
     toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     toggle.BorderSizePixel = 1
@@ -255,7 +254,7 @@ local function CreateToggle(parent, label, path, yPos)
     toggleCorner.Parent = toggle
     
     local check = Instance.new("Frame")
-    check.Size = UDim2.new(0, 14, 0, 14)
+    check.Size = UDim2.new(0, 12, 0, 12)
     check.Position = UDim2.new(0, 2, 0, 2)
     check.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
     check.BorderSizePixel = 0
@@ -270,7 +269,7 @@ local function CreateToggle(parent, label, path, yPos)
         for _, v in ipairs(path) do current = current[v] end
         if current then
             check.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            TweenService:Create(check, TweenInfo.new(0.15), {Position = UDim2.new(0, 20, 0, 2)}):Play()
+            TweenService:Create(check, TweenInfo.new(0.15), {Position = UDim2.new(0, 18, 0, 2)}):Play()
         else
             check.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
             TweenService:Create(check, TweenInfo.new(0.15), {Position = UDim2.new(0, 2, 0, 2)}):Play()
@@ -284,7 +283,6 @@ local function CreateToggle(parent, label, path, yPos)
             for i = 1, #path - 1 do current = current[path[i]] end
             current[path[#path]] = not current[path[#path]]
             UpdateToggle()
-            
             if path[1] == "ESP" and path[2] == "Enabled" then
                 if Config.ESP.Enabled then EnableESP() else DisableESP() end
             elseif path[1] == "Chams" and path[2] == "Enabled" then
@@ -302,7 +300,7 @@ end
 
 local function CreateSlider(parent, label, path, min, max, decimal, yPos)
     local holder = Instance.new("Frame")
-    holder.Size = UDim2.new(1, 0, 0, 28)
+    holder.Size = UDim2.new(1, 0, 0, 26)
     holder.Position = UDim2.new(0, 10, 0, yPos)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
@@ -398,98 +396,81 @@ local function CreateSlider(parent, label, path, min, max, decimal, yPos)
     end)
 end
 
--- Наполнение вкладок
 local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
-CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"}, 28)
-CreateSlider(aimPanel, "FOV", {"AimBot","FOV"}, 1, 180, false, 56)
-CreateSlider(aimPanel, "Smooth", {"AimBot","Smooth"}, 0, 1, true, 84)
-CreateSlider(aimPanel, "Range", {"AimBot","Range"}, 1, 50, false, 112)
-aimPanel.Size = UDim2.new(1, -10, 0, 140)
+CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"}, 26)
+CreateSlider(aimPanel, "FOV", {"AimBot","FOV"}, 1, 180, false, 52)
+aimPanel.Size = UDim2.new(1, -10, 0, 80)
 
 local silentPanel = CreateSettingPanel(CombatTab, "Silent Aim")
-CreateToggle(silentPanel, "Enable", {"Silent","Enabled"}, 28)
-CreateSlider(silentPanel, "FOV", {"Silent","FOV"}, 1, 180, false, 56)
-CreateSlider(silentPanel, "Range", {"Silent","Range"}, 1, 50, false, 84)
-silentPanel.Size = UDim2.new(1, -10, 0, 112)
-silentPanel.Position = UDim2.new(0, 5, 0, 150)
+CreateToggle(silentPanel, "Enable", {"Silent","Enabled"}, 26)
+CreateSlider(silentPanel, "FOV", {"Silent","FOV"}, 1, 180, false, 52)
+silentPanel.Size = UDim2.new(1, -10, 0, 80)
+silentPanel.Position = UDim2.new(0, 5, 0, 90)
 
 local triggerPanel = CreateSettingPanel(CombatTab, "Trigger")
-CreateToggle(triggerPanel, "Enable", {"Trigger","Enabled"}, 28)
-CreateSlider(triggerPanel, "FOV", {"Trigger","FOV"}, 1, 180, false, 56)
-CreateSlider(triggerPanel, "Range", {"Trigger","Range"}, 1, 50, false, 84)
-CreateSlider(triggerPanel, "Delay", {"Trigger","Delay"}, 10, 500, false, 112)
-triggerPanel.Size = UDim2.new(1, -10, 0, 140)
-triggerPanel.Position = UDim2.new(0, 5, 0, 270)
+CreateToggle(triggerPanel, "Enable", {"Trigger","Enabled"}, 26)
+CreateSlider(triggerPanel, "FOV", {"Trigger","FOV"}, 1, 180, false, 52)
+CreateSlider(triggerPanel, "Range", {"Trigger","Range"}, 1, 50, false, 78)
+CreateSlider(triggerPanel, "Delay", {"Trigger","Delay"}, 10, 500, false, 104)
+triggerPanel.Size = UDim2.new(1, -10, 0, 130)
+triggerPanel.Position = UDim2.new(0, 5, 0, 180)
 
 local VisualsTab = AllTabs["Visuals"]
 local espPanel = CreateSettingPanel(VisualsTab, "ESP")
-CreateToggle(espPanel, "Enable", {"ESP","Enabled"}, 28)
-CreateToggle(espPanel, "Box", {"ESP","Box"}, 56)
-CreateToggle(espPanel, "Name", {"ESP","Name"}, 84)
-CreateToggle(espPanel, "Health", {"ESP","Health"}, 112)
-CreateToggle(espPanel, "Distance", {"ESP","Distance"}, 140)
-CreateToggle(espPanel, "Skeleton", {"ESP","Skeleton"}, 168)
-CreateToggle(espPanel, "Trail", {"ESP","Trail"}, 196)
-CreateToggle(espPanel, "Highlight", {"ESP","Highlight"}, 224)
-espPanel.Size = UDim2.new(1, -10, 0, 252)
+CreateToggle(espPanel, "Enable", {"ESP","Enabled"}, 26)
+CreateToggle(espPanel, "Box", {"ESP","Box"}, 52)
+CreateToggle(espPanel, "Name", {"ESP","Name"}, 78)
+CreateToggle(espPanel, "Health", {"ESP","Health"}, 104)
+CreateToggle(espPanel, "Distance", {"ESP","Distance"}, 130)
+CreateToggle(espPanel, "Skeleton", {"ESP","Skeleton"}, 156)
+espPanel.Size = UDim2.new(1, -10, 0, 182)
 
 local chamsPanel = CreateSettingPanel(VisualsTab, "Chams")
-CreateToggle(chamsPanel, "Enable", {"Chams","Enabled"}, 28)
-CreateSlider(chamsPanel, "Transparency", {"Chams","Transparency"}, 0, 1, true, 56)
-chamsPanel.Size = UDim2.new(1, -10, 0, 84)
-chamsPanel.Position = UDim2.new(0, 5, 0, 262)
+CreateToggle(chamsPanel, "Enable", {"Chams","Enabled"}, 26)
+CreateSlider(chamsPanel, "Transparency", {"Chams","Transparency"}, 0, 1, true, 52)
+chamsPanel.Size = UDim2.new(1, -10, 0, 78)
+chamsPanel.Position = UDim2.new(0, 5, 0, 192)
 
 local fovPanel = CreateSettingPanel(VisualsTab, "FOV Circle")
-CreateToggle(fovPanel, "Show", {"FOVCircle","Enabled"}, 28)
-fovPanel.Size = UDim2.new(1, -10, 0, 56)
-fovPanel.Position = UDim2.new(0, 5, 0, 356)
-
-local worldPanel = CreateSettingPanel(VisualsTab, "World")
-CreateToggle(worldPanel, "Fog", {"World","Fog","Enabled"}, 28)
-CreateSlider(worldPanel, "Fog Density", {"World","Fog","Density"}, 0, 1, true, 56)
-CreateToggle(worldPanel, "Sky", {"World","Sky","Enabled"}, 84)
-CreateToggle(worldPanel, "Ambient", {"World","Ambient","Enabled"}, 112)
-worldPanel.Size = UDim2.new(1, -10, 0, 140)
-worldPanel.Position = UDim2.new(0, 5, 0, 422)
+CreateToggle(fovPanel, "Show", {"FOVCircle","Enabled"}, 26)
+fovPanel.Size = UDim2.new(1, -10, 0, 52)
+fovPanel.Position = UDim2.new(0, 5, 0, 280)
 
 local MovementTab = AllTabs["Movement"]
 local speedPanel = CreateSettingPanel(MovementTab, "Speed")
-CreateToggle(speedPanel, "Enable", {"Speed","Enabled"}, 28)
-CreateSlider(speedPanel, "Speed", {"Speed","Speed"}, 10, 200, false, 56)
-speedPanel.Size = UDim2.new(1, -10, 0, 84)
+CreateToggle(speedPanel, "Enable", {"Speed","Enabled"}, 26)
+CreateSlider(speedPanel, "Speed", {"Speed","Speed"}, 10, 200, false, 52)
+speedPanel.Size = UDim2.new(1, -10, 0, 78)
 
 local flyPanel = CreateSettingPanel(MovementTab, "Fly")
-CreateToggle(flyPanel, "Enable", {"Fly","Enabled"}, 28)
-CreateSlider(flyPanel, "Speed", {"Fly","Speed"}, 10, 200, false, 56)
-flyPanel.Size = UDim2.new(1, -10, 0, 84)
-flyPanel.Position = UDim2.new(0, 5, 0, 94)
+CreateToggle(flyPanel, "Enable", {"Fly","Enabled"}, 26)
+CreateSlider(flyPanel, "Speed", {"Fly","Speed"}, 10, 200, false, 52)
+flyPanel.Size = UDim2.new(1, -10, 0, 78)
+flyPanel.Position = UDim2.new(0, 5, 0, 88)
 
 local bhopPanel = CreateSettingPanel(MovementTab, "Bunny Hop")
-CreateToggle(bhopPanel, "Enable", {"BunnyHop","Enabled"}, 28)
-bhopPanel.Size = UDim2.new(1, -10, 0, 56)
-bhopPanel.Position = UDim2.new(0, 5, 0, 188)
+CreateToggle(bhopPanel, "Enable", {"BunnyHop","Enabled"}, 26)
+bhopPanel.Size = UDim2.new(1, -10, 0, 52)
+bhopPanel.Position = UDim2.new(0, 5, 0, 176)
 
 local MiscTab = AllTabs["Misc"]
 local antiAimPanel = CreateSettingPanel(MiscTab, "Anti-Aim")
-CreateToggle(antiAimPanel, "Enable", {"AntiAim","Enabled"}, 28)
-CreateToggle(antiAimPanel, "Head Down", {"AntiAim","HeadDown"}, 56)
-antiAimPanel.Size = UDim2.new(1, -10, 0, 84)
+CreateToggle(antiAimPanel, "Enable", {"AntiAim","Enabled"}, 26)
+antiAimPanel.Size = UDim2.new(1, -10, 0, 52)
 
 local watermarkPanel = CreateSettingPanel(MiscTab, "Watermark")
-CreateToggle(watermarkPanel, "Enable", {"Watermark","Enabled"}, 28)
-watermarkPanel.Size = UDim2.new(1, -10, 0, 56)
-watermarkPanel.Position = UDim2.new(0, 5, 0, 94)
+CreateToggle(watermarkPanel, "Enable", {"Watermark","Enabled"}, 26)
+watermarkPanel.Size = UDim2.new(1, -10, 0, 52)
+watermarkPanel.Position = UDim2.new(0, 5, 0, 62)
 
 local speedIndPanel = CreateSettingPanel(MiscTab, "Speed Indicator")
-CreateToggle(speedIndPanel, "Enable", {"SpeedIndicator","Enabled"}, 28)
-speedIndPanel.Size = UDim2.new(1, -10, 0, 56)
-speedIndPanel.Position = UDim2.new(0, 5, 0, 160)
+CreateToggle(speedIndPanel, "Enable", {"SpeedIndicator","Enabled"}, 26)
+speedIndPanel.Size = UDim2.new(1, -10, 0, 52)
+speedIndPanel.Position = UDim2.new(0, 5, 0, 124)
 
 local function SwitchTab(name)
-    for _, tab in pairs(AllTabs) do
-        tab.Visible = false
-    end
+    for _, tab in pairs(AllTabs) do tab.Visible = false end
     AllTabs[name].Visible = true
     for _, btn in pairs(TabButtons) do
         btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -500,9 +481,7 @@ local function SwitchTab(name)
 end
 
 for name, btn in pairs(TabButtons) do
-    btn.MouseButton1Click:Connect(function()
-        SwitchTab(name)
-    end)
+    btn.MouseButton1Click:Connect(function() SwitchTab(name) end)
 end
 SwitchTab("Combat")
 
@@ -532,7 +511,6 @@ local default = {
 }
 
 local boxCache = {}
-local flagsCache = {}
 local stackingInfo = {}
 
 local function getdistancefc(part)
@@ -549,12 +527,7 @@ end
 
 local function getPosition(placement, boxPos, boxSize, userId, elementType)
     if not stackingInfo[userId] then
-        stackingInfo[userId] = {
-            Top = { count = 0, elements = {} },
-            Bottom = { count = 0, elements = {} },
-            Left = { count = 0, elements = {} },
-            Right = { count = 0, elements = {} }
-        }
+        stackingInfo[userId] = { Top = { count = 0, elements = {} }, Bottom = { count = 0, elements = {} }, Left = { count = 0, elements = {} }, Right = { count = 0, elements = {} } }
     end
     if not stackingInfo[userId][placement].elements[elementType] then
         stackingInfo[userId][placement].count = stackingInfo[userId][placement].count + 1
@@ -632,12 +605,10 @@ local function flagsEsp(p, cr)
     text.Font = 2
     text.Color = Color3.fromRGB(255,255,255)
     text.Size = 13
-    flagsCache[p.UserId] = text
     local c1, c2, c3
     local function dc()
         text.Visible = false
         text:Remove()
-        flagsCache[p.UserId] = nil
         if c1 then c1:Disconnect() end
         if c2 then c2:Disconnect() end
         if c3 then c3:Disconnect() end
@@ -707,10 +678,8 @@ local function updateBoxESP(v)
             local hrpPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
             if headOnScreen and footOnScreen and onScreen then
                 local scaleFactor = 1000 / hrpPos.Z
-                local char = v.Character
-                local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
-                local charWidth = torso and torso.Size.X or 2
-                local width = charWidth * scaleFactor * 1.2
+                -- Сделал хитбокс максимально вертикальным!
+                local width = 0.7 * scaleFactor * 1.2
                 local height = (headPos.Y - footPos.Y) * 1.1
                 local centerX = hrpPos.X
                 local centerY = (headPos.Y + footPos.Y) / 2
@@ -731,50 +700,19 @@ local function updateBoxESP(v)
     end)
 end
 
-local function ftool(cr)
-    for _, b in next, cr:GetChildren() do 
-        if b.ClassName == 'Tool' then return tostring(b.Name) end
-    end
-    return 'empty'
-end
-
-local function toolEsp(p, cr)
-    local h = cr:WaitForChild("Humanoid")
-    local hrp = cr:WaitForChild("HumanoidRootPart")
-    local text = Drawing.new('Text')
-    text.Visible = false
-    text.Outline = true
-    text.Color = Color3.new(1, 1, 1)
-    text.Font = 2
-    text.Size = 13
-    local c1, c2, c3
-    local function dc()
-        text.Visible = false
-        text:Remove()
-        if c1 then c1:Disconnect() end
-        if c2 then c2:Disconnect() end
-        if c3 then c3:Disconnect() end
-    end
-    c2 = cr.AncestryChanged:Connect(function(_, parent)
-        if not parent then dc() end
-    end)
-    c3 = h.HealthChanged:Connect(function(v)
-        if v <= 0 or h:GetState() == Enum.HumanoidStateType.Dead then dc() end
-    end)
-    c1 = RunService.Heartbeat:Connect(function()
-        if not boxCache[p.UserId] then return end
-        local boxPos = boxCache[p.UserId].Box.Position
-        local boxSize = boxCache[p.UserId].Box.Size
-        if boxCache[p.UserId].Box.Visible then
-            local pos, centered = getPosition(default.tool.placement, boxPos, boxSize, p.UserId, "tool")
-            text.Position = pos
-            text.Center = centered
-            text.Text = '[ ' .. tostring(ftool(cr)) .. ' ]'
-            text.Visible = default.tool.enable and Config.ESP.Distance
-        else
-            text.Visible = false
-        end
-    end)
+-- Создание 3D хайлайта для работы ESP везде (даже если 2D не работает)
+local function createHighlight(player)
+    if not Config.ESP.Highlight then return end
+    if not player.Character then return end
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = default.highlight.fillColor
+    highlight.OutlineColor = default.highlight.outlineColor
+    highlight.FillTransparency = default.highlight.fillTransparency
+    highlight.OutlineTransparency = default.highlight.outlineTransparency
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Enabled = default.highlight.enable
+    highlight.Parent = player.Character
+    table.insert(ESPObjects, highlight)
 end
 
 local function createTrail(character)
@@ -796,50 +734,29 @@ local function createTrail(character)
     table.insert(ESPObjects, trail)
 end
 
-local function createHighlight(player)
-    if not Config.ESP.Highlight then return end
-    if not player.Character then return end
-    local highlight = Instance.new("Highlight")
-    highlight.FillColor = default.highlight.fillColor
-    highlight.OutlineColor = default.highlight.outlineColor
-    highlight.FillTransparency = default.highlight.fillTransparency
-    highlight.OutlineTransparency = default.highlight.outlineTransparency
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Enabled = default.highlight.enable
-    highlight.Parent = player.Character
-    table.insert(ESPObjects, highlight)
-end
-
 local R6_CONNECTIONS = {
     {'Head', 'Torso'}, {'Torso', 'Left Arm'}, {'Torso', 'Right Arm'}, {'Torso', 'Left Leg'}, {'Torso', 'Right Leg'}
 }
-
 local R15_CONNECTIONS = {
     {'Head', 'UpperTorso'}, {'UpperTorso', 'LowerTorso'}, {'UpperTorso', 'LeftUpperArm'}, {'UpperTorso', 'RightUpperArm'},
     {'LeftUpperArm', 'LeftLowerArm'}, {'LeftLowerArm', 'LeftHand'}, {'RightUpperArm', 'RightLowerArm'}, {'RightLowerArm', 'RightHand'},
     {'LowerTorso', 'LeftUpperLeg'}, {'LowerTorso', 'RightUpperLeg'}, {'LeftUpperLeg', 'LeftLowerLeg'}, {'LeftLowerLeg', 'LeftFoot'},
     {'RightUpperLeg', 'RightLowerLeg'}, {'RightLowerLeg', 'RightFoot'}
 }
-
 local lines = {}
 local outlines = {}
-
 local function worldToScreen(part)
     local position, onScreen = Camera:WorldToViewportPoint(part.Position)
     return Vector2.new(position.X, position.Y), onScreen
 end
-
 local function getCharacterRig(character)
     return character:FindFirstChild('Torso') and 'R6' or 'R15'
 end
-
 local function clearLines()
     for _, line in ipairs(lines) do line:Remove() end
     for _, outline in ipairs(outlines) do outline:Remove() end
-    lines = {}
-    outlines = {}
+    lines = {}; outlines = {}
 end
-
 local function drawSkeleton()
     clearLines()
     if not Config.ESP.Skeleton then return end
@@ -860,16 +777,14 @@ local function drawSkeleton()
                             if fromVisible and toVisible then
                                 if default.skeleton.outlineEnabled then
                                     local outline = Drawing.new('Line')
-                                    outline.From = fromScreen
-                                    outline.To = toScreen
+                                    outline.From = fromScreen; outline.To = toScreen
                                     outline.Color = default.skeleton.outlineColor
                                     outline.Thickness = default.skeleton.outlineThickness
                                     outline.Visible = true
                                     table.insert(outlines, outline)
                                 end
                                 local line = Drawing.new('Line')
-                                line.From = fromScreen
-                                line.To = toScreen
+                                line.From = fromScreen; line.To = toScreen
                                 line.Color = default.skeleton.color
                                 line.Thickness = default.skeleton.lineThickness
                                 line.Visible = true
@@ -889,7 +804,6 @@ local function playerAdded(p)
         wait(0.5)
         if Config.ESP.Enabled then
             esp(p, cr)
-            toolEsp(p, cr)
             updateBoxESP(p)
             flagsEsp(p, cr)
             createTrail(cr)
@@ -916,7 +830,6 @@ function EnableESP()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             esp(player, player.Character)
-            toolEsp(player, player.Character)
             updateBoxESP(player)
             flagsEsp(player, player.Character)
             createTrail(player.Character)
@@ -968,7 +881,6 @@ function EnableFly()
         if humanoid then humanoid.PlatformStand = true end
     end
 end
-
 function DisableFly()
     FlyActive = false
     local char = LocalPlayer.Character
@@ -979,7 +891,6 @@ function DisableFly()
         if root then root.Velocity = Vector3.new(0,0,0) end
     end
 end
-
 function EnableSpeed()
     SpeedActive = true
     local char = LocalPlayer.Character
@@ -988,7 +899,6 @@ function EnableSpeed()
         if humanoid then humanoid.WalkSpeed = Config.Speed.Speed end
     end
 end
-
 function DisableSpeed()
     SpeedActive = false
     local char = LocalPlayer.Character
@@ -997,11 +907,9 @@ function DisableSpeed()
         if humanoid then humanoid.WalkSpeed = 16 end
     end
 end
-
 function EnableAntiAim()
     AntiAimActive = true
 end
-
 function DisableAntiAim()
     AntiAimActive = false
 end
@@ -1019,7 +927,6 @@ CircleButton.InputBegan:Connect(function(input)
         dragOffset = Vector2.new(input.Position.X - CircleButton.AbsolutePosition.X, input.Position.Y - CircleButton.AbsolutePosition.Y)
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if isDragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
         local currentPos = Vector2.new(input.Position.X, input.Position.Y)
@@ -1029,7 +936,6 @@ UserInputService.InputChanged:Connect(function(input)
         end
     end
 end)
-
 CircleButton.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
         if isClick then
@@ -1044,80 +950,38 @@ CircleButton.InputEnded:Connect(function(input)
         isDragging = false
     end
 end)
-
 CloseBtn.MouseButton1Click:Connect(function()
     MenuOpen = false
     MainFrame.Visible = false
     if FOVCircle then FOVCircle.Visible = false end
 end)
-
 CloseBtn.TouchTap:Connect(function()
     MenuOpen = false
     MainFrame.Visible = false
     if FOVCircle then FOVCircle.Visible = false end
 end)
 
-local function GetClosestPlayerForAim()
-    local closest = nil
-    local shortest = Config.AimBot.Range
+local function GetBestTarget()
+    local best = nil
+    local bestDist = math.huge
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local part = player.Character:FindFirstChild(Config.AimBot.AimPart) or player.Character:FindFirstChild("Head")
-            if part then
-                local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+            local head = player.Character:FindFirstChild("Head") or player.Character:FindFirstChild("HumanoidRootPart")
+            if head then
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
                 if onScreen then
                     local dist = (pos - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                    if dist < Config.AimBot.FOV and dist < shortest then
-                        closest = player
-                        shortest = dist
+                    if dist < Config.AimBot.FOV then
+                        if dist < bestDist then
+                            bestDist = dist
+                            best = player
+                        end
                     end
                 end
             end
         end
     end
-    return closest
-end
-
-local function GetClosestPlayerForSilent()
-    local closest = nil
-    local shortest = Config.Silent.Range
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local part = player.Character:FindFirstChild(Config.Silent.AimPart) or player.Character:FindFirstChild("Head")
-            if part then
-                local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
-                if onScreen then
-                    local dist = (pos - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                    if dist < Config.Silent.FOV and dist < shortest then
-                        closest = player
-                        shortest = dist
-                    end
-                end
-            end
-        end
-    end
-    return closest
-end
-
-local function GetClosestPlayerForTrigger()
-    local closest = nil
-    local shortest = Config.Trigger.FOV
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local part = player.Character:FindFirstChild("Head")
-            if part then
-                local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
-                if onScreen then
-                    local dist = (pos - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                    if dist < Config.Trigger.FOV and dist < shortest then
-                        closest = player
-                        shortest = dist
-                    end
-                end
-            end
-        end
-    end
-    return closest
+    return best
 end
 
 local triggerDelay = 0
@@ -1126,7 +990,6 @@ local function UpdateIndicators()
     for _, obj in pairs(IndicatorObjects) do obj:Destroy() end
     IndicatorObjects = {}
     if not (Config.ESP.Enabled and Config.ESP.Box) then return end
-    
     local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -1156,10 +1019,8 @@ local function UpdateDistanceLines()
     for _, obj in pairs(DistanceLines) do obj:Destroy() end
     DistanceLines = {}
     if not (Config.ESP.Enabled and Config.ESP.Distance) then return end
-    
     local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myPos then return end
-    
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = player.Character.HumanoidRootPart
@@ -1173,7 +1034,6 @@ local function UpdateDistanceLines()
                 line.BorderSizePixel = 0
                 line.Parent = ScreenGui
                 table.insert(DistanceLines, line)
-                
                 local angle = math.atan2(hrpScreen.Y - myScreen.Y, hrpScreen.X - myScreen.X)
                 line.Rotation = math.deg(angle)
                 line.Position = UDim2.new(0, myScreen.X, 0, myScreen.Y)
@@ -1201,26 +1061,11 @@ RunService.RenderStepped:Connect(function()
     end
     
     if Config.AimBot.Enabled and not MenuOpen then
-        local target = GetClosestPlayerForAim()
+        local target = GetBestTarget()
         if target and target.Character then
             local aimPart = target.Character:FindFirstChild(Config.AimBot.AimPart) or target.Character:FindFirstChild("Head")
             if aimPart then
                 -- Мгновенное наведение (100% попадание)
-                local pos = Camera:WorldToViewportPoint(aimPart.Position)
-                local current = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                local dist = (Vector2.new(pos.X, pos.Y) - current).Magnitude
-                if dist < Config.AimBot.FOV then
-                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
-                end
-            end
-        end
-    end
-    
-    if Config.Silent.Enabled and not MenuOpen then
-        local target = GetClosestPlayerForSilent()
-        if target and target.Character then
-            local aimPart = target.Character:FindFirstChild(Config.Silent.AimPart) or target.Character:FindFirstChild("Head")
-            if aimPart then
                 Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
             end
         end
@@ -1229,13 +1074,15 @@ RunService.RenderStepped:Connect(function()
     if Config.Trigger.Enabled and not MenuOpen then
         triggerDelay = triggerDelay + 1
         if triggerDelay >= Config.Trigger.Delay then
-            local target = GetClosestPlayerForTrigger()
+            local target = GetBestTarget()
             if target then
                 local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
                 if remote then
-                    pcall(function() remote:FireServer("MouseButton1Down") end)
-                    wait(0.05)
-                    pcall(function() remote:FireServer("MouseButton1Up") end)
+                    local aimPart = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
+                    if aimPart then
+                        -- Математика для пули: отправляем точную позицию цели в RemoteEvent
+                        pcall(function() remote:FireServer(aimPart.Position) end)
+                    end
                 end
                 triggerDelay = 0
             end
@@ -1359,7 +1206,6 @@ RunService.Heartbeat:Connect(function()
     else
         Watermark.Visible = false
     end
-    
     if Config.SpeedIndicator.Enabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         SpeedLabel.Visible = true
         local speed = LocalPlayer.Character.HumanoidRootPart.Velocity.Magnitude
