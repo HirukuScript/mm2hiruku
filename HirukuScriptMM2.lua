@@ -6,25 +6,21 @@ local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
 
 local Config = {
-    AimBot = {Enabled = false, FOV = 35, Smooth = 0.45, Range = 15, AimPart = "Head"},
-    Silent = {Enabled = false, Range = 15, FOV = 35, AimPart = "Head"},
-    Trigger = {Enabled = false, Range = 20, FOV = 10, Delay = 50},
-    Chams = {Enabled = false, Transparency = 0.3, Color = Color3.fromRGB(255,255,255)},
-    ESP = {Enabled = false, Box = true, Name = true, Health = true, Distance = true, Skeleton = false, Trail = false, Highlight = false},
+    AimBot = {Enabled = false, FOV = 35, Thickness = 2, Color = Color3.fromRGB(255,255,255), AimPart = "Head", Range = 15, Smooth = 0.2},
+    Silent = {Enabled = false, FOV = 35, Thickness = 2, Color = Color3.fromRGB(255,255,255), AimPart = "Head", Range = 15},
+    Trigger = {Enabled = false, FOV = 35, Range = 20, Delay = 50},
+    Chams = {Enabled = false, Transparency = 0.3, FillColor = Color3.fromRGB(255,255,255), OutlineColor = Color3.fromRGB(0,0,0)},
+    ESP = {Enabled = false, Box = true, Name = true, Health = true, Distance = true, Skeleton = false},
     BunnyHop = {Enabled = false},
     Speed = {Enabled = false, Speed = 50},
     Fly = {Enabled = false, Speed = 50},
     AntiAim = {Enabled = false, Mode = "Jitter", SpinSpeed = 90, HeadDown = false},
     Watermark = {Enabled = true},
     FOVCircle = {Enabled = true},
-    SpeedIndicator = {Enabled = true},
-    World = {
-        Fog = {Enabled = false, Color = Color3.fromRGB(255,255,255), Density = 0.5},
-        Sky = {Enabled = false, Color = Color3.fromRGB(135,206,235)},
-        Ambient = {Enabled = false, Color = Color3.fromRGB(128,128,128)}
-    }
+    SpeedIndicator = {Enabled = true}
 }
 
 local MenuOpen = false
@@ -63,10 +59,9 @@ local circleCorner = Instance.new("UICorner")
 circleCorner.CornerRadius = UDim.new(1, 0)
 circleCorner.Parent = CircleButton
 
--- Меню стало меньше (450x360)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 450, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -225, 0.5, -180)
+MainFrame.Size = UDim2.new(0, 400, 0, 320)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -160)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 1
@@ -93,12 +88,12 @@ TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleText.TextXAlignment = Enum.TextXAlignment.Left
 TitleText.TextScaled = false
 TitleText.Font = Enum.Font.Code
-TitleText.TextSize = 18
+TitleText.TextSize = 16
 TitleText.Parent = TitleBar
 
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 28, 0, 28)
-CloseBtn.Position = UDim2.new(1, -33, 0, 3)
+CloseBtn.Size = UDim2.new(0, 26, 0, 26)
+CloseBtn.Position = UDim2.new(1, -31, 0, 4)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
 CloseBtn.Text = "✕"
 CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -112,32 +107,26 @@ closeCorner.CornerRadius = UDim.new(0, 5)
 closeCorner.Parent = CloseBtn
 
 local Tabs = Instance.new("Frame")
-Tabs.Size = UDim2.new(0, 110, 1, -35)
+Tabs.Size = UDim2.new(0, 100, 1, -35)
 Tabs.Position = UDim2.new(0, 0, 0, 35)
 Tabs.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
 Tabs.BorderSizePixel = 0
 Tabs.Parent = MainFrame
 
 local ContentArea = Instance.new("ScrollingFrame")
-ContentArea.Size = UDim2.new(1, -120, 1, -35)
-ContentArea.Position = UDim2.new(0, 120, 0, 35)
+ContentArea.Size = UDim2.new(1, -110, 1, -35)
+ContentArea.Position = UDim2.new(0, 110, 0, 35)
 ContentArea.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 ContentArea.BorderSizePixel = 0
-ContentArea.ScrollBarThickness = 4
+ContentArea.ScrollBarThickness = 3
 ContentArea.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
 ContentArea.Parent = MainFrame
 
 local Sections = {"Combat", "Visuals", "Movement", "Misc"}
-local SectionIcons = {
-    Combat = "rbxassetid://6031094667",
-    Visuals = "rbxassetid://6031094667",
-    Movement = "rbxassetid://6031094667",
-    Misc = "rbxassetid://6031094667"
-}
 
 local TabsLayout = Instance.new("UIListLayout")
 TabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-TabsLayout.Padding = UDim.new(0, 5)
+TabsLayout.Padding = UDim.new(0, 4)
 TabsLayout.Parent = Tabs
 
 local TabButtons = {}
@@ -145,13 +134,14 @@ local AllTabs = {}
 
 for i, name in ipairs(Sections) do
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 100, 0, 35)
+    btn.Size = UDim2.new(0, 90, 0, 35)
     btn.Position = UDim2.new(0, 5, 0, (i-1) * 40)
     btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    -- Убрал дублирующий текст с самой кнопки!
-    btn.Text = "" 
+    btn.Text = name
     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.TextScaled = false
     btn.Font = Enum.Font.Code
+    btn.TextSize = 13
     btn.BorderSizePixel = 1
     btn.BorderColor3 = Color3.fromRGB(30, 30, 30)
     btn.Parent = Tabs
@@ -160,27 +150,6 @@ for i, name in ipairs(Sections) do
     local tabCorner = Instance.new("UICorner")
     tabCorner.CornerRadius = UDim.new(0, 5)
     tabCorner.Parent = btn
-
-    local icon = Instance.new("ImageLabel")
-    icon.Size = UDim2.new(0, 18, 0, 18)
-    icon.Position = UDim2.new(0, 8, 0.5, -9)
-    icon.BackgroundTransparency = 1
-    icon.Image = SectionIcons[name]
-    icon.ImageColor3 = Color3.fromRGB(255, 255, 255)
-    icon.ScaleType = Enum.ScaleType.Fit
-    icon.Parent = btn
-
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -30, 1, 0)
-    label.Position = UDim2.new(0, 30, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextScaled = false
-    label.Font = Enum.Font.Code
-    label.TextSize = 13
-    label.Parent = btn
 
     local content = Instance.new("Frame")
     content.Size = UDim2.new(1, 0, 1, 0)
@@ -211,7 +180,7 @@ local function CreateSettingPanel(parent, title)
     header.TextXAlignment = Enum.TextXAlignment.Left
     header.TextScaled = false
     header.Font = Enum.Font.Code
-    header.TextSize = 14
+    header.TextSize = 13
     header.BorderSizePixel = 0
     header.Parent = panel
     
@@ -230,7 +199,7 @@ local function CreateToggle(parent, label, path, yPos)
     holder.Parent = parent
     
     local text = Instance.new("TextLabel")
-    text.Size = UDim2.new(0.45, 0, 1, 0)
+    text.Size = UDim2.new(0.5, 0, 1, 0)
     text.Position = UDim2.new(0, 0, 0, 0)
     text.BackgroundTransparency = 1
     text.Text = label
@@ -242,8 +211,8 @@ local function CreateToggle(parent, label, path, yPos)
     text.Parent = holder
     
     local toggle = Instance.new("Frame")
-    toggle.Size = UDim2.new(0, 32, 0, 16)
-    toggle.Position = UDim2.new(0.82, 0, 0.2, 0)
+    toggle.Size = UDim2.new(0, 30, 0, 16)
+    toggle.Position = UDim2.new(0.8, 0, 0.2, 0)
     toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     toggle.BorderSizePixel = 1
     toggle.BorderColor3 = Color3.fromRGB(100, 100, 100)
@@ -269,7 +238,7 @@ local function CreateToggle(parent, label, path, yPos)
         for _, v in ipairs(path) do current = current[v] end
         if current then
             check.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            TweenService:Create(check, TweenInfo.new(0.15), {Position = UDim2.new(0, 18, 0, 2)}):Play()
+            TweenService:Create(check, TweenInfo.new(0.15), {Position = UDim2.new(0, 16, 0, 2)}):Play()
         else
             check.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
             TweenService:Create(check, TweenInfo.new(0.15), {Position = UDim2.new(0, 2, 0, 2)}):Play()
@@ -396,17 +365,66 @@ local function CreateSlider(parent, label, path, min, max, decimal, yPos)
     end)
 end
 
+local function CreateColorButton(parent, label, path, colorList, yPos)
+    local holder = Instance.new("Frame")
+    holder.Size = UDim2.new(1, 0, 0, 26)
+    holder.Position = UDim2.new(0, 10, 0, yPos)
+    holder.BackgroundTransparency = 1
+    holder.Parent = parent
+    
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(0.4, 0, 1, 0)
+    text.Position = UDim2.new(0, 0, 0, 0)
+    text.BackgroundTransparency = 1
+    text.Text = label
+    text.TextColor3 = Color3.fromRGB(220, 220, 220)
+    text.TextXAlignment = Enum.TextXAlignment.Left
+    text.TextScaled = false
+    text.Font = Enum.Font.Code
+    text.TextSize = 12
+    text.Parent = holder
+    
+    for idx, color in ipairs(colorList) do
+        local btn = Instance.new("Frame")
+        btn.Size = UDim2.new(0, 18, 0, 18)
+        btn.Position = UDim2.new(0.6 + (idx-1)*0.08, 0, 0.15, 0)
+        btn.BackgroundColor3 = color
+        btn.BorderSizePixel = 1
+        btn.BorderColor3 = Color3.fromRGB(255,255,255)
+        btn.Parent = holder
+        
+        local btnCorner = Instance.new("UICorner")
+        btnCorner.CornerRadius = UDim.new(0, 3)
+        btnCorner.Parent = btn
+        
+        btn.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                local current = Config
+                for i = 1, #path - 1 do current = current[path[i]] end
+                current[path[#path]] = color
+                if path[1] == "AimBot" and path[2] == "Color" then CreateFOVCircle() end
+                if path[1] == "Silent" and path[2] == "Color" then CreateFOVCircle() end
+                if path[1] == "Chams" and path[2] == "FillColor" then EnableChams() end
+            end
+        end)
+    end
+end
+
 local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
 CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"}, 26)
 CreateSlider(aimPanel, "FOV", {"AimBot","FOV"}, 1, 180, false, 52)
-aimPanel.Size = UDim2.new(1, -10, 0, 80)
+CreateSlider(aimPanel, "Range", {"AimBot","Range"}, 1, 50, false, 78)
+CreateColorButton(aimPanel, "Color", {"AimBot","Color"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)}, 104)
+aimPanel.Size = UDim2.new(1, -10, 0, 130)
 
 local silentPanel = CreateSettingPanel(CombatTab, "Silent Aim")
 CreateToggle(silentPanel, "Enable", {"Silent","Enabled"}, 26)
 CreateSlider(silentPanel, "FOV", {"Silent","FOV"}, 1, 180, false, 52)
-silentPanel.Size = UDim2.new(1, -10, 0, 80)
-silentPanel.Position = UDim2.new(0, 5, 0, 90)
+CreateSlider(silentPanel, "Range", {"Silent","Range"}, 1, 50, false, 78)
+CreateColorButton(silentPanel, "Color", {"Silent","Color"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)}, 104)
+silentPanel.Size = UDim2.new(1, -10, 0, 130)
+silentPanel.Position = UDim2.new(0, 5, 0, 140)
 
 local triggerPanel = CreateSettingPanel(CombatTab, "Trigger")
 CreateToggle(triggerPanel, "Enable", {"Trigger","Enabled"}, 26)
@@ -414,7 +432,7 @@ CreateSlider(triggerPanel, "FOV", {"Trigger","FOV"}, 1, 180, false, 52)
 CreateSlider(triggerPanel, "Range", {"Trigger","Range"}, 1, 50, false, 78)
 CreateSlider(triggerPanel, "Delay", {"Trigger","Delay"}, 10, 500, false, 104)
 triggerPanel.Size = UDim2.new(1, -10, 0, 130)
-triggerPanel.Position = UDim2.new(0, 5, 0, 180)
+triggerPanel.Position = UDim2.new(0, 5, 0, 280)
 
 local VisualsTab = AllTabs["Visuals"]
 local espPanel = CreateSettingPanel(VisualsTab, "ESP")
@@ -429,13 +447,17 @@ espPanel.Size = UDim2.new(1, -10, 0, 182)
 local chamsPanel = CreateSettingPanel(VisualsTab, "Chams")
 CreateToggle(chamsPanel, "Enable", {"Chams","Enabled"}, 26)
 CreateSlider(chamsPanel, "Transparency", {"Chams","Transparency"}, 0, 1, true, 52)
-chamsPanel.Size = UDim2.new(1, -10, 0, 78)
+CreateColorButton(chamsPanel, "Fill", {"Chams","FillColor"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)}, 78)
+CreateColorButton(chamsPanel, "Outline", {"Chams","OutlineColor"}, {Color3.fromRGB(0,0,0), Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,0,255)}, 104)
+chamsPanel.Size = UDim2.new(1, -10, 0, 130)
 chamsPanel.Position = UDim2.new(0, 5, 0, 192)
 
 local fovPanel = CreateSettingPanel(VisualsTab, "FOV Circle")
 CreateToggle(fovPanel, "Show", {"FOVCircle","Enabled"}, 26)
-fovPanel.Size = UDim2.new(1, -10, 0, 52)
-fovPanel.Position = UDim2.new(0, 5, 0, 280)
+CreateSlider(fovPanel, "Thickness", {"AimBot","Thickness"}, 1, 5, false, 52)
+CreateColorButton(fovPanel, "Color", {"AimBot","Color"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)}, 78)
+fovPanel.Size = UDim2.new(1, -10, 0, 104)
+fovPanel.Position = UDim2.new(0, 5, 0, 332)
 
 local MovementTab = AllTabs["Movement"]
 local speedPanel = CreateSettingPanel(MovementTab, "Speed")
@@ -470,7 +492,9 @@ speedIndPanel.Size = UDim2.new(1, -10, 0, 52)
 speedIndPanel.Position = UDim2.new(0, 5, 0, 124)
 
 local function SwitchTab(name)
-    for _, tab in pairs(AllTabs) do tab.Visible = false end
+    for _, tab in pairs(AllTabs) do
+        tab.Visible = false
+    end
     AllTabs[name].Visible = true
     for _, btn in pairs(TabButtons) do
         btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -481,7 +505,9 @@ local function SwitchTab(name)
 end
 
 for name, btn in pairs(TabButtons) do
-    btn.MouseButton1Click:Connect(function() SwitchTab(name) end)
+    btn.MouseButton1Click:Connect(function()
+        SwitchTab(name)
+    end)
 end
 SwitchTab("Combat")
 
@@ -489,9 +515,9 @@ local FOVCircle = nil
 function CreateFOVCircle()
     if FOVCircle then FOVCircle:Remove() end
     FOVCircle = Drawing.new("Circle")
-    FOVCircle.Thickness = 1
+    FOVCircle.Thickness = Config.AimBot.Thickness
     FOVCircle.Radius = Config.AimBot.FOV
-    FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+    FOVCircle.Color = Config.AimBot.Color
     FOVCircle.Transparency = 0.5
     FOVCircle.Filled = false
     FOVCircle.Visible = Config.FOVCircle.Enabled
@@ -554,7 +580,6 @@ end
 
 local HeadOff = Vector3.new(0, 0.5, 0)
 local LegOff = Vector3.new(0, 3, 0)
-local boxScaleFactor = 1.2
 
 local function esp(p, cr)
     local h = cr:WaitForChild("Humanoid")
@@ -678,7 +703,6 @@ local function updateBoxESP(v)
             local hrpPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
             if headOnScreen and footOnScreen and onScreen then
                 local scaleFactor = 1000 / hrpPos.Z
-                -- Сделал хитбокс максимально вертикальным!
                 local width = 0.7 * scaleFactor * 1.2
                 local height = (headPos.Y - footPos.Y) * 1.1
                 local centerX = hrpPos.X
@@ -700,21 +724,6 @@ local function updateBoxESP(v)
     end)
 end
 
--- Создание 3D хайлайта для работы ESP везде (даже если 2D не работает)
-local function createHighlight(player)
-    if not Config.ESP.Highlight then return end
-    if not player.Character then return end
-    local highlight = Instance.new("Highlight")
-    highlight.FillColor = default.highlight.fillColor
-    highlight.OutlineColor = default.highlight.outlineColor
-    highlight.FillTransparency = default.highlight.fillTransparency
-    highlight.OutlineTransparency = default.highlight.outlineTransparency
-    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    highlight.Enabled = default.highlight.enable
-    highlight.Parent = player.Character
-    table.insert(ESPObjects, highlight)
-end
-
 local function createTrail(character)
     if not Config.ESP.Trail then return end
     local humanoidRootPart = character:WaitForChild("HumanoidRootPart", 5)
@@ -732,6 +741,20 @@ local function createTrail(character)
     trail.Color = ColorSequence.new(default.trail.rgb)
     trail.Parent = humanoidRootPart
     table.insert(ESPObjects, trail)
+end
+
+local function createHighlight(player)
+    if not Config.ESP.Highlight then return end
+    if not player.Character then return end
+    local highlight = Instance.new("Highlight")
+    highlight.FillColor = default.highlight.fillColor
+    highlight.OutlineColor = default.highlight.outlineColor
+    highlight.FillTransparency = default.highlight.fillTransparency
+    highlight.OutlineTransparency = default.highlight.outlineTransparency
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Enabled = default.highlight.enable
+    highlight.Parent = player.Character
+    table.insert(ESPObjects, highlight)
 end
 
 local R6_CONNECTIONS = {
@@ -854,9 +877,9 @@ function EnableChams()
                 if part:IsA("BasePart") then
                     local highlight = Instance.new("Highlight")
                     highlight.Adornee = part
-                    highlight.FillColor = Color3.fromRGB(255,255,255)
+                    highlight.FillColor = Config.Chams.FillColor
                     highlight.FillTransparency = Config.Chams.Transparency
-                    highlight.OutlineColor = Color3.fromRGB(255,255,255)
+                    highlight.OutlineColor = Config.Chams.OutlineColor
                     highlight.OutlineTransparency = 0.5
                     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
                     highlight.Parent = part
@@ -1055,6 +1078,8 @@ RunService.RenderStepped:Connect(function()
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         FOVCircle.Position = center
         FOVCircle.Radius = Config.AimBot.FOV
+        FOVCircle.Thickness = Config.AimBot.Thickness
+        FOVCircle.Color = Config.AimBot.Color
         FOVCircle.Visible = true
     elseif FOVCircle then
         FOVCircle.Visible = false
@@ -1065,8 +1090,11 @@ RunService.RenderStepped:Connect(function()
         if target and target.Character then
             local aimPart = target.Character:FindFirstChild(Config.AimBot.AimPart) or target.Character:FindFirstChild("Head")
             if aimPart then
-                -- Мгновенное наведение (100% попадание)
                 Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
+                local remote = ReplicatedStorage:FindFirstChild("RemoteEvent")
+                if remote then
+                    pcall(function() remote:FireServer(aimPart.Position) end)
+                end
             end
         end
     end
@@ -1080,7 +1108,6 @@ RunService.RenderStepped:Connect(function()
                 if remote then
                     local aimPart = target.Character:FindFirstChild("Head") or target.Character:FindFirstChild("HumanoidRootPart")
                     if aimPart then
-                        -- Математика для пули: отправляем точную позицию цели в RemoteEvent
                         pcall(function() remote:FireServer(aimPart.Position) end)
                     end
                 end
@@ -1140,29 +1167,6 @@ RunService.RenderStepped:Connect(function()
                 head.CFrame = head.CFrame * CFrame.Angles(math.rad(90), 0, 0)
             end
         end
-    end
-    
-    if Config.World.Fog.Enabled then
-        Lighting.Fog = true
-        Lighting.FogColor = Config.World.Fog.Color
-        Lighting.FogEnd = 1000 / (Config.World.Fog.Density + 0.1)
-    else
-        Lighting.Fog = false
-    end
-    
-    if Config.World.Sky.Enabled then
-        local sky = Lighting:FindFirstChild("Sky")
-        if sky then
-            for _, child in ipairs(sky:GetChildren()) do
-                if child:IsA("ImageLabel") then
-                    child.Color = Config.World.Sky.Color
-                end
-            end
-        end
-    end
-    
-    if Config.World.Ambient.Enabled then
-        Lighting.Ambient = Config.World.Ambient.Color
     end
     
     UpdateIndicators()
