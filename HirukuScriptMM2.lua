@@ -36,6 +36,7 @@ local SpeedActive = false
 local AntiAimActive = false
 local CurrentFPS = 0
 local LastFrameTime = tick()
+local FOVCircle = nil
 local ESPObjects = {}
 local ChamsObjects = {}
 local IndicatorObjects = {}
@@ -48,8 +49,8 @@ ScreenGui.ResetOnSpawn = false
 
 -- Кнопка открытия меню
 local CircleButton = Instance.new("TextButton")
-CircleButton.Size = UDim2.new(0, 60, 0, 60)
-CircleButton.Position = UDim2.new(0.02, 0, 0.5, -30)
+CircleButton.Size = UDim2.new(0, 70, 0, 70)
+CircleButton.Position = UDim2.new(0.02, 0, 0.5, -35)
 CircleButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 CircleButton.Text = "H"
 CircleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -409,15 +410,14 @@ CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"}, 30)
 CreateSlider(aimPanel, "FOV", {"AimBot","FOV"}, 1, 180, false, 60)
 CreateSlider(aimPanel, "Smooth", {"AimBot","Smooth"}, 0, 1, true, 90)
 CreateSlider(aimPanel, "Range", {"AimBot","Range"}, 1, 50, false, 120)
-CreateSlider(aimPanel, "Aim Part", {"AimBot","AimPart"}, 1, 50, false, 150)
-aimPanel.Size = UDim2.new(1, -10, 0, 180)
+aimPanel.Size = UDim2.new(1, -10, 0, 150)
 
 local silentPanel = CreateSettingPanel(CombatTab, "Silent Aim")
 CreateToggle(silentPanel, "Enable", {"Silent","Enabled"}, 30)
 CreateSlider(silentPanel, "FOV", {"Silent","FOV"}, 1, 180, false, 60)
 CreateSlider(silentPanel, "Range", {"Silent","Range"}, 1, 50, false, 90)
 silentPanel.Size = UDim2.new(1, -10, 0, 120)
-silentPanel.Position = UDim2.new(0, 5, 0, 190)
+silentPanel.Position = UDim2.new(0, 5, 0, 160)
 
 local triggerPanel = CreateSettingPanel(CombatTab, "Trigger")
 CreateToggle(triggerPanel, "Enable", {"Trigger","Enabled"}, 30)
@@ -425,7 +425,7 @@ CreateSlider(triggerPanel, "FOV", {"Trigger","FOV"}, 1, 180, false, 60)
 CreateSlider(triggerPanel, "Range", {"Trigger","Range"}, 1, 50, false, 90)
 CreateSlider(triggerPanel, "Delay", {"Trigger","Delay"}, 10, 500, false, 120)
 triggerPanel.Size = UDim2.new(1, -10, 0, 150)
-triggerPanel.Position = UDim2.new(0, 5, 0, 320)
+triggerPanel.Position = UDim2.new(0, 5, 0, 290)
 
 local VisualsTab = AllTabs["Visuals"]
 local espPanel = CreateSettingPanel(VisualsTab, "ESP")
@@ -527,7 +527,7 @@ end
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
 
--- ESP из файла
+-- ESP из файла (с 2D боксами, именем, скелетом, трейлом, хайлайтом)
 local default = {
     ["2dbox"] = { color = Color3.fromRGB(255, 255, 255), enable = true },
     ["name"] = { enable = true, placement = "Top" },
@@ -1012,47 +1012,43 @@ function DisableAntiAim()
     AntiAimActive = false
 end
 
--- Перетаскивание кнопки H
-local dragging = false
+-- Перетаскивание кнопки H с обработкой клика
+local isDragging = false
+local dragStart = Vector2.new()
 local dragOffset = Vector2.new()
+local isClick = false
 
 CircleButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
+        isDragging = true
+        isClick = true
+        dragStart = Vector2.new(input.Position.X, input.Position.Y)
         dragOffset = Vector2.new(input.Position.X - CircleButton.AbsolutePosition.X, input.Position.Y - CircleButton.AbsolutePosition.Y)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if isDragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+        local currentPos = Vector2.new(input.Position.X, input.Position.Y)
+        if (currentPos - dragStart).Magnitude > 8 then
+            isClick = false
+            CircleButton.Position = UDim2.new(0, currentPos.X - dragOffset.X, 0, currentPos.Y - dragOffset.Y)
+        end
     end
 end)
 
 CircleButton.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
-        CircleButton.Position = UDim2.new(0, input.Position.X - dragOffset.X, 0, input.Position.Y - dragOffset.Y)
-    end
-end)
-
--- Открытие/закрытие меню
-CircleButton.MouseButton1Click:Connect(function()
-    MenuOpen = not MenuOpen
-    MainFrame.Visible = MenuOpen
-    if MenuOpen then
-        if Config.FOVCircle.Enabled then CreateFOVCircle() end
-    else
-        if FOVCircle then FOVCircle.Visible = false end
-    end
-end)
-
-CircleButton.TouchTap:Connect(function()
-    MenuOpen = not MenuOpen
-    MainFrame.Visible = MenuOpen
-    if MenuOpen then
-        if Config.FOVCircle.Enabled then CreateFOVCircle() end
-    else
-        if FOVCircle then FOVCircle.Visible = false end
+        if isClick then
+            MenuOpen = not MenuOpen
+            MainFrame.Visible = MenuOpen
+            if MenuOpen then
+                if Config.FOVCircle.Enabled then CreateFOVCircle() end
+            else
+                if FOVCircle then FOVCircle.Visible = false end
+            end
+        end
+        isDragging = false
     end
 end)
 
