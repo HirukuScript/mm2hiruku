@@ -8,11 +8,12 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 local Config = {
-    AimBot = {Enabled = false, FOV = 35, Thickness = 2, Color = Color3.fromRGB(255,255,255), AimPart = "Head", Range = 50, Mode = "Camera"},
-    Silent = {Enabled = false, FOV = 35, Range = 50, AimPart = "Head"},
-    Trigger = {Enabled = false, FOV = 35, Range = 35, Delay = 50},
-    Chams = {Enabled = false, Transparency = 0.3, FillColor = Color3.fromRGB(255,255,255), OutlineColor = Color3.fromRGB(0,0,0)},
-    ESP = {Enabled = false, Box = true, Name = true, Health = true, Distance = true, Skeleton = false},
+    AimBot = {Enabled = false, Mode = "Camera", Range = 50, AimPart = "Head"},
+    Silent = {Enabled = false, Mode = "Normal", Range = 50, AimPart = "Head"},
+    Trigger = {Enabled = false, Range = 35, Delay = 50},
+    FOV = {Radius = 35, Thickness = 2, Color = Color3.fromRGB(255,255,255)},
+    Chams = {Enabled = false, Mode = "Flat", Transparency = 0.3, FillColor = Color3.fromRGB(255,255,255), OutlineColor = Color3.fromRGB(0,0,0)},
+    ESP = {Enabled = false, Box = true, Name = true, Health = true, Distance = true},
     BunnyHop = {Enabled = false, IncreaseSpeed = true, MaxSpeed = 100},
     Speed = {Enabled = false, Speed = 50},
     Fly = {Enabled = false, Speed = 50, HeightOffset = 10},
@@ -49,7 +50,6 @@ ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
--- Кнопка H (открытие и перетаскивание)
 local CircleButton = Instance.new("TextButton")
 CircleButton.Size = UDim2.new(0, 60, 0, 60)
 CircleButton.Position = UDim2.new(0.02, 0, 0.5, -30)
@@ -85,11 +85,9 @@ local mainCorner = Instance.new("UICorner")
 mainCorner.CornerRadius = UDim.new(0, 8)
 mainCorner.Parent = MainFrame
 
--- Заголовок и перетаскивание меню
-local TitleBar = Instance.new("TextButton")
+local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 35)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-TitleBar.Text = ""
 TitleBar.BorderSizePixel = 0
 TitleBar.Parent = MainFrame
 
@@ -178,7 +176,6 @@ for i, name in ipairs(Sections) do
     contentLayout.Parent = content
 end
 
--- Функции создания UI карточек
 local function CreateSettingPanel(parent, title)
     local panel = Instance.new("Frame")
     panel.Size = UDim2.new(1, -10, 0, 30)
@@ -186,11 +183,11 @@ local function CreateSettingPanel(parent, title)
     panel.BorderSizePixel = 1
     panel.BorderColor3 = Color3.fromRGB(30, 30, 30)
     panel.Parent = parent
-
+    
     local panelCorner = Instance.new("UICorner")
     panelCorner.CornerRadius = UDim.new(0, 5)
     panelCorner.Parent = panel
-
+    
     local header = Instance.new("TextLabel")
     header.Size = UDim2.new(1, 0, 0, 25)
     header.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
@@ -202,16 +199,16 @@ local function CreateSettingPanel(parent, title)
     header.TextSize = 13
     header.BorderSizePixel = 0
     header.Parent = panel
-
+    
     local headerCorner = Instance.new("UICorner")
     headerCorner.CornerRadius = UDim.new(0, 5)
     headerCorner.Parent = header
-
+    
     local layout = Instance.new("UIListLayout")
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Padding = UDim.new(0, 4)
     layout.Parent = panel
-
+    
     return panel
 end
 
@@ -220,7 +217,7 @@ local function CreateToggle(parent, label, path)
     holder.Size = UDim2.new(1, -10, 0, 30)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
-
+    
     local text = Instance.new("TextLabel")
     text.Size = UDim2.new(0.6, 0, 1, 0)
     text.Position = UDim2.new(0, 0, 0, 0)
@@ -232,7 +229,7 @@ local function CreateToggle(parent, label, path)
     text.Font = Enum.Font.Code
     text.TextSize = 12
     text.Parent = holder
-
+    
     local toggle = Instance.new("Frame")
     toggle.Size = UDim2.new(0, 30, 0, 16)
     toggle.Position = UDim2.new(0.8, 0, 0.2, 0)
@@ -240,22 +237,22 @@ local function CreateToggle(parent, label, path)
     toggle.BorderSizePixel = 1
     toggle.BorderColor3 = Color3.fromRGB(100, 100, 100)
     toggle.Parent = holder
-
+    
     local toggleCorner = Instance.new("UICorner")
     toggleCorner.CornerRadius = UDim.new(1, 0)
     toggleCorner.Parent = toggle
-
+    
     local check = Instance.new("Frame")
     check.Size = UDim2.new(0, 12, 0, 12)
     check.Position = UDim2.new(0, 2, 0, 2)
     check.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
     check.BorderSizePixel = 0
     check.Parent = toggle
-
+    
     local checkCorner = Instance.new("UICorner")
     checkCorner.CornerRadius = UDim.new(1, 0)
     checkCorner.Parent = check
-
+    
     local function UpdateToggle()
         local current = Config
         for _, v in ipairs(path) do current = current[v] end
@@ -268,7 +265,7 @@ local function CreateToggle(parent, label, path)
         end
     end
     UpdateToggle()
-
+    
     toggle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             local current = Config
@@ -295,7 +292,7 @@ local function CreateSlider(parent, label, path, min, max, decimal)
     holder.Size = UDim2.new(1, -10, 0, 45)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
-
+    
     local text = Instance.new("TextLabel")
     text.Size = UDim2.new(0.5, 0, 0, 20)
     text.Position = UDim2.new(0, 0, 0, 0)
@@ -307,7 +304,7 @@ local function CreateSlider(parent, label, path, min, max, decimal)
     text.Font = Enum.Font.Code
     text.TextSize = 12
     text.Parent = holder
-
+    
     local val = Instance.new("TextLabel")
     val.Size = UDim2.new(0.2, 0, 0, 20)
     val.Position = UDim2.new(0.5, 0, 0, 0)
@@ -318,7 +315,7 @@ local function CreateSlider(parent, label, path, min, max, decimal)
     val.Font = Enum.Font.Code
     val.TextSize = 12
     val.Parent = holder
-
+    
     local slider = Instance.new("Frame")
     slider.Size = UDim2.new(0.9, 0, 0.2, 0)
     slider.Position = UDim2.new(0, 0, 0.5, 0)
@@ -326,21 +323,21 @@ local function CreateSlider(parent, label, path, min, max, decimal)
     slider.BorderSizePixel = 1
     slider.BorderColor3 = Color3.fromRGB(100, 100, 100)
     slider.Parent = holder
-
+    
     local sliderCorner = Instance.new("UICorner")
     sliderCorner.CornerRadius = UDim.new(1, 0)
     sliderCorner.Parent = slider
-
+    
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new(0.5, 0, 1, 0)
     fill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     fill.BorderSizePixel = 0
     fill.Parent = slider
-
+    
     local fillCorner = Instance.new("UICorner")
     fillCorner.CornerRadius = UDim.new(1, 0)
     fillCorner.Parent = fill
-
+    
     local function UpdateSlider()
         local current = Config
         for _, v in ipairs(path) do current = current[v] end
@@ -353,7 +350,7 @@ local function CreateSlider(parent, label, path, min, max, decimal)
         end
     end
     UpdateSlider()
-
+    
     local dragging = false
     slider.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -392,7 +389,7 @@ local function CreateColorButton(parent, label, path, colorList)
     holder.Size = UDim2.new(1, -10, 0, 40)
     holder.BackgroundTransparency = 1
     holder.Parent = parent
-
+    
     local text = Instance.new("TextLabel")
     text.Size = UDim2.new(0.8, 0, 0, 20)
     text.Position = UDim2.new(0, 0, 0, 0)
@@ -404,15 +401,15 @@ local function CreateColorButton(parent, label, path, colorList)
     text.Font = Enum.Font.Code
     text.TextSize = 12
     text.Parent = holder
-
+    
     local btnHolder = Instance.new("Frame")
     btnHolder.Size = UDim2.new(1, 0, 0, 20)
     btnHolder.Position = UDim2.new(0, 0, 0, 20)
     btnHolder.BackgroundTransparency = 1
     btnHolder.Parent = holder
-
+    
     local colorBtns = {}
-
+    
     for idx, color in ipairs(colorList) do
         local btn = Instance.new("Frame")
         btn.Size = UDim2.new(0, 18, 0, 18)
@@ -421,19 +418,19 @@ local function CreateColorButton(parent, label, path, colorList)
         btn.BorderSizePixel = 1
         btn.BorderColor3 = Color3.fromRGB(60, 60, 60)
         btn.Parent = btnHolder
-
+        
         local btnCorner = Instance.new("UICorner")
         btnCorner.CornerRadius = UDim.new(0, 3)
         btnCorner.Parent = btn
-
+        
         table.insert(colorBtns, btn)
-
+        
         btn.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 local current = Config
                 for i = 1, #path - 1 do current = current[path[i]] end
                 current[path[#path]] = color
-
+                
                 for _, b in ipairs(colorBtns) do
                     if b.BackgroundColor3 == color then
                         b.BorderColor3 = Color3.fromRGB(255, 255, 255)
@@ -443,7 +440,7 @@ local function CreateColorButton(parent, label, path, colorList)
                         b.BorderSizePixel = 1
                     end
                 end
-
+                
                 if path[1] == "AimBot" and path[2] == "Color" then CreateFOVCircle() end
                 if path[1] == "Silent" and path[2] == "Color" then CreateFOVCircle() end
                 if path[1] == "Chams" and path[2] == "FillColor" then EnableChams() end
@@ -451,7 +448,7 @@ local function CreateColorButton(parent, label, path, colorList)
             end
         end)
     end
-
+    
     local current = Config
     for _, v in ipairs(path) do current = current[v] end
     for _, b in ipairs(colorBtns) do
@@ -462,55 +459,97 @@ local function CreateColorButton(parent, label, path, colorList)
     end
 end
 
--- Наполнение вкладок
+local function CreateDropdown(parent, label, path, options)
+    local holder = Instance.new("Frame")
+    holder.Size = UDim2.new(1, -10, 0, 30)
+    holder.BackgroundTransparency = 1
+    holder.Parent = parent
+    
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(0.6, 0, 1, 0)
+    text.Position = UDim2.new(0, 0, 0, 0)
+    text.BackgroundTransparency = 1
+    text.Text = label
+    text.TextColor3 = Color3.fromRGB(220, 220, 220)
+    text.TextXAlignment = Enum.TextXAlignment.Left
+    text.TextScaled = false
+    text.Font = Enum.Font.Code
+    text.TextSize = 12
+    text.Parent = holder
+    
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.35, 0, 0.8, 0)
+    btn.Position = UDim2.new(0.65, 0, 0.1, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextScaled = false
+    btn.Font = Enum.Font.Code
+    btn.TextSize = 12
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = Color3.fromRGB(80, 80, 80)
+    btn.Parent = holder
+    
+    local current = Config
+    for _, v in ipairs(path) do current = current[v] end
+    btn.Text = current
+    
+    btn.MouseButton1Click:Connect(function()
+        local index = 1
+        for i, opt in ipairs(options) do
+            if opt == current then index = i end
+        end
+        index = (index % #options) + 1
+        current = options[index]
+        btn.Text = current
+    end)
+end
+
 local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
 CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"})
-CreateSlider(aimPanel, "FOV", {"AimBot","FOV"}, 1, 180, false)
 CreateSlider(aimPanel, "Range", {"AimBot","Range"}, 1, 100, false)
-CreateColorButton(aimPanel, "Color", {"AimBot","Color"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)})
-aimPanel.Size = UDim2.new(1, -10, 0, 200)
+CreateDropdown(aimPanel, "Mode", {"AimBot","Mode"}, {"Camera", "Remote"})
+aimPanel.Size = UDim2.new(1, -10, 0, 130)
 
 local silentPanel = CreateSettingPanel(CombatTab, "Silent Aim")
 CreateToggle(silentPanel, "Enable", {"Silent","Enabled"})
-CreateSlider(silentPanel, "FOV", {"Silent","FOV"}, 1, 180, false)
 CreateSlider(silentPanel, "Range", {"Silent","Range"}, 1, 100, false)
-CreateColorButton(silentPanel, "Color", {"Silent","Color"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)})
-silentPanel.Size = UDim2.new(1, -10, 0, 200)
-silentPanel.Position = UDim2.new(0, 5, 0, 210)
+CreateDropdown(silentPanel, "Mode", {"Silent","Mode"}, {"Normal", "HvH"})
+silentPanel.Size = UDim2.new(1, -10, 0, 130)
+silentPanel.Position = UDim2.new(0, 5, 0, 140)
 
 local triggerPanel = CreateSettingPanel(CombatTab, "Trigger")
 CreateToggle(triggerPanel, "Enable", {"Trigger","Enabled"})
-CreateSlider(triggerPanel, "FOV", {"Trigger","FOV"}, 1, 180, false)
 CreateSlider(triggerPanel, "Range", {"Trigger","Range"}, 1, 50, false)
 CreateSlider(triggerPanel, "Delay", {"Trigger","Delay"}, 10, 500, false)
-triggerPanel.Size = UDim2.new(1, -10, 0, 180)
-triggerPanel.Position = UDim2.new(0, 5, 0, 420)
+triggerPanel.Size = UDim2.new(1, -10, 0, 130)
+triggerPanel.Position = UDim2.new(0, 5, 0, 280)
 
 local VisualsTab = AllTabs["Visuals"]
+local fovPanel = CreateSettingPanel(VisualsTab, "FOV Circle")
+CreateToggle(fovPanel, "Show", {"FOVCircle","Enabled"})
+CreateSlider(fovPanel, "Radius", {"FOV","Radius"}, 1, 180, false)
+CreateSlider(fovPanel, "Thickness", {"FOV","Thickness"}, 1, 5, false)
+CreateColorButton(fovPanel, "Color", {"FOV","Color"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)})
+fovPanel.Size = UDim2.new(1, -10, 0, 170)
+
 local espPanel = CreateSettingPanel(VisualsTab, "ESP")
 CreateToggle(espPanel, "Enable", {"ESP","Enabled"})
 CreateToggle(espPanel, "Box", {"ESP","Box"})
 CreateToggle(espPanel, "Name", {"ESP","Name"})
 CreateToggle(espPanel, "Health", {"ESP","Health"})
 CreateToggle(espPanel, "Distance", {"ESP","Distance"})
-CreateToggle(espPanel, "Skeleton", {"ESP","Skeleton"})
-espPanel.Size = UDim2.new(1, -10, 0, 210)
+espPanel.Size = UDim2.new(1, -10, 0, 180)
+espPanel.Position = UDim2.new(0, 5, 0, 180)
 
 local chamsPanel = CreateSettingPanel(VisualsTab, "Chams")
 CreateToggle(chamsPanel, "Enable", {"Chams","Enabled"})
 CreateSlider(chamsPanel, "Transparency", {"Chams","Transparency"}, 0, 1, true)
+CreateDropdown(chamsPanel, "Mode", {"Chams","Mode"}, {"Flat", "Wireframe", "Glass"})
 CreateColorButton(chamsPanel, "Fill", {"Chams","FillColor"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)})
 CreateColorButton(chamsPanel, "Outline", {"Chams","OutlineColor"}, {Color3.fromRGB(0,0,0), Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,0,255)})
-chamsPanel.Size = UDim2.new(1, -10, 0, 170)
-chamsPanel.Position = UDim2.new(0, 5, 0, 220)
-
-local fovPanel = CreateSettingPanel(VisualsTab, "FOV Circle")
-CreateToggle(fovPanel, "Show", {"FOVCircle","Enabled"})
-CreateSlider(fovPanel, "Thickness", {"AimBot","Thickness"}, 1, 5, false)
-CreateColorButton(fovPanel, "Color", {"AimBot","Color"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)})
-fovPanel.Size = UDim2.new(1, -10, 0, 130)
-fovPanel.Position = UDim2.new(0, 5, 0, 400)
+chamsPanel.Size = UDim2.new(1, -10, 0, 210)
+chamsPanel.Position = UDim2.new(0, 5, 0, 370)
 
 local MovementTab = AllTabs["Movement"]
 local speedPanel = CreateSettingPanel(MovementTab, "Speed")
@@ -535,17 +574,20 @@ bhopPanel.Position = UDim2.new(0, 5, 0, 260)
 local MiscTab = AllTabs["Misc"]
 local antiAimPanel = CreateSettingPanel(MiscTab, "Anti-Aim")
 CreateToggle(antiAimPanel, "Enable", {"AntiAim","Enabled"})
-antiAimPanel.Size = UDim2.new(1, -10, 0, 60)
+CreateDropdown(antiAimPanel, "Mode", {"AntiAim","Mode"}, {"Jitter", "Spin", "Backwards"})
+CreateSlider(antiAimPanel, "Spin Speed", {"AntiAim","SpinSpeed"}, 30, 360, false)
+CreateToggle(antiAimPanel, "Head Down", {"AntiAim","HeadDown"})
+antiAimPanel.Size = UDim2.new(1, -10, 0, 160)
 
 local watermarkPanel = CreateSettingPanel(MiscTab, "Watermark")
 CreateToggle(watermarkPanel, "Enable", {"Watermark","Enabled"})
 watermarkPanel.Size = UDim2.new(1, -10, 0, 60)
-watermarkPanel.Position = UDim2.new(0, 5, 0, 70)
+watermarkPanel.Position = UDim2.new(0, 5, 0, 170)
 
 local speedIndPanel = CreateSettingPanel(MiscTab, "Speed Indicator")
 CreateToggle(speedIndPanel, "Enable", {"SpeedIndicator","Enabled"})
 speedIndPanel.Size = UDim2.new(1, -10, 0, 60)
-speedIndPanel.Position = UDim2.new(0, 5, 0, 140)
+speedIndPanel.Position = UDim2.new(0, 5, 0, 240)
 
 local function SwitchTab(name)
     for _, tab in pairs(AllTabs) do
@@ -571,9 +613,9 @@ local FOVCircle = nil
 function CreateFOVCircle()
     if FOVCircle then FOVCircle:Remove() end
     FOVCircle = Drawing.new("Circle")
-    FOVCircle.Thickness = Config.AimBot.Thickness
-    FOVCircle.Radius = Config.AimBot.FOV
-    FOVCircle.Color = Config.AimBot.Color
+    FOVCircle.Thickness = Config.FOV.Thickness
+    FOVCircle.Radius = Config.FOV.Radius
+    FOVCircle.Color = Config.FOV.Color
     FOVCircle.Transparency = 0.5
     FOVCircle.Filled = false
     FOVCircle.Visible = Config.FOVCircle.Enabled
@@ -581,7 +623,6 @@ end
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
 
--- Универсальные функции для любых моделей
 local function FindTorso(char)
     return char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("LowerTorso") or char:FindFirstChild("HumanoidRootPart")
 end
@@ -590,134 +631,60 @@ local function FindHead(char)
     return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart")
 end
 
--- ESP и Chams
+local ESPCache = {}
+
 local function CreateESPForPlayer(player)
     if not ESPActive then return end
     local char = player.Character
     if not char then return end
-
-    local torso = FindTorso(char)
-    local head = FindHead(char)
-    local hrp = char:FindFirstChild("HumanoidRootPart") or torso
+    
+    local hrp = char:FindFirstChild("HumanoidRootPart") or FindTorso(char)
     if not hrp then return end
-
-    local espFolder = Instance.new("Folder")
-    espFolder.Name = "ESP_" .. player.Name
-    espFolder.Parent = char
-    table.insert(ESPObjects, espFolder)
-
-    if Config.ESP.Box then
-        local box = Instance.new("BoxHandleAdornment")
-        box.Size = Vector3.new(2, 5, 2)
-        box.Adornee = hrp
-        box.Color3 = Color3.fromRGB(255,255,255)
-        box.Transparency = 0.5
-        box.AlwaysOnTop = true
-        box.ZIndex = 0
-        box.Parent = espFolder
-        table.insert(ESPObjects, box)
-    end
-
-    if Config.ESP.Name then
-        local nameTag = Instance.new("BillboardGui")
-        nameTag.Size = UDim2.new(0, 120, 0, 20)
-        nameTag.Adornee = hrp
-        nameTag.AlwaysOnTop = true
-        nameTag.Parent = espFolder
-
-        local nameLabel = Instance.new("TextLabel")
-        nameLabel.Size = UDim2.new(1,0,1,0)
-        nameLabel.BackgroundTransparency = 1
-        nameLabel.Text = player.Name
-        nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
-        nameLabel.TextScaled = true
-        nameLabel.Font = Enum.Font.Code
-        nameLabel.Parent = nameTag
-        table.insert(ESPObjects, nameTag)
-    end
-
-    if Config.ESP.Health then
-        local healthTag = Instance.new("BillboardGui")
-        healthTag.Size = UDim2.new(0, 100, 0, 20)
-        healthTag.Position = UDim2.new(0,0,0,20)
-        healthTag.Adornee = hrp
-        healthTag.AlwaysOnTop = true
-        healthTag.Parent = espFolder
-
-        local healthLabel = Instance.new("TextLabel")
-        healthLabel.Size = UDim2.new(1,0,1,0)
-        healthLabel.BackgroundTransparency = 1
-        healthLabel.Text = math.floor(char.Humanoid.Health) .. "/" .. char.Humanoid.MaxHealth
-        healthLabel.TextColor3 = Color3.fromRGB(255,255,255)
-        healthLabel.TextScaled = true
-        healthLabel.Font = Enum.Font.Code
-        healthLabel.Parent = healthTag
-        table.insert(ESPObjects, healthTag)
-    end
-
-    if Config.ESP.Distance then
-        local distTag = Instance.new("BillboardGui")
-        distTag.Size = UDim2.new(0, 80, 0, 20)
-        distTag.Position = UDim2.new(0,0,0,40)
-        distTag.Adornee = hrp
-        distTag.AlwaysOnTop = true
-        distTag.Parent = espFolder
-
-        local distLabel = Instance.new("TextLabel")
-        distLabel.Size = UDim2.new(1,0,1,0)
-        distLabel.BackgroundTransparency = 1
-        local dist = (hrp.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-        distLabel.Text = math.floor(dist) .. "m"
-        distLabel.TextColor3 = Color3.fromRGB(255,255,255)
-        distLabel.TextScaled = true
-        distLabel.Font = Enum.Font.Code
-        distLabel.Parent = distTag
-        table.insert(ESPObjects, distTag)
-    end
-
-    if Config.ESP.Skeleton then
-        DrawSkeletonForPlayer(char)
-    end
-end
-
-local function DrawSkeletonForPlayer(char)
-    local parts = {
-        {"Head", "Torso"},
-        {"Torso", "Left Arm"},
-        {"Torso", "Right Arm"},
-        {"Torso", "Left Leg"},
-        {"Torso", "Right Leg"}
-    }
-
-    for _, connection in ipairs(parts) do
-        local part1 = char:FindFirstChild(connection[1]) or FindTorso(char)
-        local part2 = char:FindFirstChild(connection[2]) or FindTorso(char)
-        if part1 and part2 then
-            local attachment1 = Instance.new("Attachment")
-            attachment1.Position = Vector3.new(0,0,0)
-            attachment1.Parent = part1
-
-            local attachment2 = Instance.new("Attachment")
-            attachment2.Position = Vector3.new(0,0,0)
-            attachment2.Parent = part2
-
-            local line = Instance.new("Beam")
-            line.Attachment0 = attachment1
-            line.Attachment1 = attachment2
-            line.Width0 = 0.1
-            line.Width1 = 0.1
-            line.Color = ColorSequence.new(Color3.fromRGB(255,255,255))
-            line.Transparency = NumberSequence.new(0)
-            line.Parent = char
-            table.insert(ESPObjects, line)
-        end
-    end
+    
+    local data = {}
+    
+    local box = Drawing.new("Square")
+    box.Visible = false
+    box.Thickness = 1
+    box.Color = Color3.fromRGB(255, 255, 255)
+    box.Transparency = 1
+    box.Filled = false
+    table.insert(data, box)
+    
+    local nameText = Drawing.new("Text")
+    nameText.Visible = false
+    nameText.Size = 13
+    nameText.Font = 2
+    nameText.Color = Color3.fromRGB(255, 255, 255)
+    nameText.Outline = true
+    nameText.Center = true
+    table.insert(data, nameText)
+    
+    local healthText = Drawing.new("Text")
+    healthText.Visible = false
+    healthText.Size = 13
+    healthText.Font = 2
+    healthText.Color = Color3.fromRGB(255, 255, 255)
+    healthText.Outline = true
+    healthText.Center = true
+    table.insert(data, healthText)
+    
+    local distText = Drawing.new("Text")
+    distText.Visible = false
+    distText.Size = 13
+    distText.Font = 2
+    distText.Color = Color3.fromRGB(255, 255, 255)
+    distText.Outline = true
+    distText.Center = true
+    table.insert(data, distText)
+    
+    ESPCache[player] = data
 end
 
 function EnableESP()
     ESPActive = true
     for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
+        if player ~= LocalPlayer then
             CreateESPForPlayer(player)
         end
     end
@@ -725,28 +692,42 @@ end
 
 function DisableESP()
     ESPActive = false
-    for _, obj in pairs(ESPObjects) do
-        pcall(function() obj:Destroy() end)
+    for _, data in pairs(ESPCache) do
+        for _, obj in ipairs(data) do
+            pcall(function() obj:Remove() end)
+        end
     end
-    ESPObjects = {}
+    ESPCache = {}
 end
 
 function EnableChamsForPlayer(player)
     if not ChamsActive then return end
     local char = player.Character
     if not char then return end
+    
     for _, desc in ipairs(char:GetDescendants()) do
         if desc:IsA("BasePart") then
             local highlight = Instance.new("Highlight")
             highlight.Adornee = desc
             highlight.FillColor = Config.Chams.FillColor
-            highlight.FillTransparency = Config.Chams.Transparency
             highlight.OutlineColor = Config.Chams.OutlineColor
-            highlight.OutlineTransparency = 0.5
             highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
             highlight.Parent = desc
             table.insert(ChamsObjects, highlight)
         end
+    end
+end
+
+local function ApplyChamsMode(highlight)
+    if Config.Chams.Mode == "Flat" then
+        highlight.FillTransparency = Config.Chams.Transparency
+        highlight.OutlineTransparency = 0.5
+    elseif Config.Chams.Mode == "Wireframe" then
+        highlight.FillTransparency = 1
+        highlight.OutlineTransparency = 0
+    elseif Config.Chams.Mode == "Glass" then
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0.2
     end
 end
 
@@ -823,7 +804,6 @@ function DisableAntiAim()
     AntiAimActive = false
 end
 
--- Логика AimBot и Silent Aim
 local function GetClosestPlayerByDistance(range)
     local closest = nil
     local bestDist = range
@@ -874,13 +854,11 @@ local function FireRemoteAt(target)
 end
 
 local triggerDelay = 0
-local lastClickTime = 0
 
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        lastClickTime = tick()
-        if Config.Silent.Enabled and not MenuOpen then
+        if Config.Silent.Enabled and Config.Silent.Mode == "Normal" and not MenuOpen then
             local target = GetClosestPlayerByDistance(Config.Silent.Range)
             if target then
                 local aimPart = target.Character:FindFirstChild(Config.Silent.AimPart) or FindHead(target.Character)
@@ -923,16 +901,16 @@ RunService.RenderStepped:Connect(function()
     if Config.FOVCircle.Enabled and FOVCircle then
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         FOVCircle.Position = center
-        FOVCircle.Radius = Config.AimBot.FOV
-        FOVCircle.Thickness = Config.AimBot.Thickness
-        FOVCircle.Color = Config.AimBot.Color
+        FOVCircle.Radius = Config.FOV.Radius
+        FOVCircle.Thickness = Config.FOV.Thickness
+        FOVCircle.Color = Config.FOV.Color
         FOVCircle.Visible = true
     elseif FOVCircle then
         FOVCircle.Visible = false
     end
 
     if Config.AimBot.Enabled and not MenuOpen then
-        local target = GetClosestPlayerByScreen(Config.AimBot.FOV)
+        local target = GetClosestPlayerByScreen(Config.FOV.Radius)
         if not target then
             target = GetClosestPlayerByDistance(Config.AimBot.Range)
         end
@@ -948,6 +926,20 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    if Config.Silent.Enabled and Config.Silent.Mode == "HvH" and not MenuOpen then
+        local target = GetClosestPlayerByScreen(Config.FOV.Radius)
+        if not target then
+            target = GetClosestPlayerByDistance(Config.Silent.Range)
+        end
+        if target and target.Character then
+            local aimPart = target.Character:FindFirstChild(Config.Silent.AimPart) or FindHead(target.Character)
+            if aimPart then
+                Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
+                FireRemoteAt(aimPart.Position)
+            end
+        end
+    end
+
     if Config.Trigger.Enabled and not MenuOpen then
         triggerDelay = triggerDelay + 1
         if triggerDelay >= Config.Trigger.Delay then
@@ -958,6 +950,72 @@ RunService.RenderStepped:Connect(function()
                     FireRemoteAt(aimPart.Position)
                 end
                 triggerDelay = 0
+            end
+        end
+    end
+
+    if ESPActive then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+                local data = ESPCache[player]
+                if not data then
+                    CreateESPForPlayer(player)
+                    data = ESPCache[player]
+                end
+                if data then
+                    local hrp = player.Character:FindFirstChild("HumanoidRootPart") or FindTorso(player.Character)
+                    local head = FindHead(player.Character)
+                    if hrp and head then
+                        local headPos, headOnScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
+                        local footPos, footOnScreen = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+                        local hrpPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                        
+                        if onScreen and headOnScreen and footOnScreen then
+                            local box = data[1]
+                            local nameText = data[2]
+                            local healthText = data[3]
+                            local distText = data[4]
+                            
+                            if Config.ESP.Box then
+                                local scale = 1000 / hrpPos.Z
+                                local width = 0.7 * scale
+                                local height = (headPos.Y - footPos.Y) * 1.1
+                                box.Size = Vector2.new(width, height)
+                                box.Position = Vector2.new(hrpPos.X - width / 2, (headPos.Y + footPos.Y) / 2 - height / 2)
+                                box.Visible = true
+                            else
+                                box.Visible = false
+                            end
+                            
+                            if Config.ESP.Name then
+                                nameText.Position = Vector2.new(headPos.X, headPos.Y - 15)
+                                nameText.Text = player.Name
+                                nameText.Visible = true
+                            else
+                                nameText.Visible = false
+                            end
+                            
+                            if Config.ESP.Health then
+                                healthText.Position = Vector2.new(headPos.X, headPos.Y - 30)
+                                healthText.Text = tostring(math.floor(player.Character.Humanoid.Health))
+                                healthText.Visible = true
+                            else
+                                healthText.Visible = false
+                            end
+                            
+                            if Config.ESP.Distance then
+                                local dist = (hrp.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                                distText.Position = Vector2.new(headPos.X, headPos.Y - 45)
+                                distText.Text = tostring(math.floor(dist)) .. "m"
+                                distText.Visible = true
+                            else
+                                distText.Visible = false
+                            end
+                        else
+                            for _, obj in ipairs(data) do obj.Visible = false end
+                        end
+                    end
+                end
             end
         end
     end
@@ -1003,29 +1061,6 @@ RunService.RenderStepped:Connect(function()
                 head.CFrame = head.CFrame * CFrame.Angles(math.rad(90), 0, 0)
             end
         end
-    end
-
-    if Config.World.Fog.Enabled then
-        Lighting.Fog = true
-        Lighting.FogColor = Config.World.Fog.Color
-        Lighting.FogEnd = 1000 / (Config.World.Fog.Density + 0.1)
-    else
-        Lighting.Fog = false
-    end
-
-    if Config.World.Sky.Enabled then
-        local sky = Lighting:FindFirstChild("Sky")
-        if sky then
-            for _, child in ipairs(sky:GetChildren()) do
-                if child:IsA("ImageLabel") then
-                    child.Color = Config.World.Sky.Color
-                end
-            end
-        end
-    end
-
-    if Config.World.Ambient.Enabled then
-        Lighting.Ambient = Config.World.Ambient.Color
     end
 end)
 
@@ -1075,7 +1110,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Функции для кнопки и меню
 local isDraggingCircle = false
 local dragStartCircle = Vector2.new()
 local dragOffsetCircle = Vector2.new()
@@ -1156,7 +1190,6 @@ CloseBtn.TouchTap:Connect(function()
     if FOVCircle then FOVCircle.Visible = false end
 end)
 
--- Автоматическое обновление ESP/Chams на новых персонажах
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         player.CharacterAdded:Connect(function()
