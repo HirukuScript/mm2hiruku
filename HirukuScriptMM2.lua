@@ -40,7 +40,6 @@ local BhopSpeed = 16
 local LastBhopTime = 0
 local triggerDelay = 0
 
--- Создание GUI и верхний слой
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HirukuInternal"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -49,30 +48,26 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 99999
 ScreenGui.IgnoreGuiInset = true
 
--- НОВАЯ КНОПКА МЕНЮ (Белый фон, красный треугольник, маленькая)
+-- Новая кнопка меню (чёрный квадрат с белой обводкой и белой H)
 local CircleButton = Instance.new("TextButton")
-CircleButton.Size = UDim2.new(0, 30, 0, 30)
-CircleButton.Position = UDim2.new(0.02, 0, 0.5, -15)
-CircleButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-CircleButton.Text = ""
+CircleButton.Size = UDim2.new(0, 45, 0, 45)
+CircleButton.Position = UDim2.new(0.02, 0, 0.5, -22)
+CircleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+CircleButton.Text = "H"
+CircleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CircleButton.TextScaled = false
+CircleButton.TextSize = 24
+CircleButton.Font = Enum.Font.Code
+CircleButton.BorderSizePixel = 2
+CircleButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
 CircleButton.AutoButtonColor = false
 CircleButton.ZIndex = 500
 CircleButton.Parent = ScreenGui
 
 local circleCorner = Instance.new("UICorner")
-circleCorner.CornerRadius = UDim.new(1, 0)
+circleCorner.CornerRadius = UDim.new(0, 10)
 circleCorner.Parent = CircleButton
 
-local CircleText = Instance.new("TextLabel")
-CircleText.Size = UDim2.new(1, 0, 1, 0)
-CircleText.BackgroundTransparency = 1
-CircleText.Text = "▶"
-CircleText.TextColor3 = Color3.fromRGB(255, 0, 0)
-CircleText.TextScaled = true
-CircleText.Font = Enum.Font.Code
-CircleText.Parent = CircleButton
-
--- Меню (С большим ZIndex)
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 450, 0, 400)
 MainFrame.Position = UDim2.new(0.5, -225, 0.5, -200)
@@ -465,7 +460,6 @@ local function CreateColorButton(parent, label, path, colorList)
     end
 end
 
--- Заполнение вкладок
 local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
 CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"})
@@ -530,7 +524,6 @@ bhopPanel.Size = UDim2.new(1, -10, 0, 100)
 bhopPanel.Position = UDim2.new(0, 5, 0, 260)
 
 local MiscTab = AllTabs["Misc"]
--- Новая функция SPIN (вместо AntiAim)
 local spinPanel = CreateSettingPanel(MiscTab, "Spin")
 CreateToggle(spinPanel, "Enable", {"Spin","Enabled"})
 CreateSlider(spinPanel, "Speed", {"Spin","Speed"}, 60, 720, false)
@@ -585,7 +578,6 @@ end
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
 
--- Логика AimBot / Silent / Trigger
 local function FindTorso(char)
     return char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("LowerTorso") or char:FindFirstChild("HumanoidRootPart")
 end
@@ -672,8 +664,7 @@ RunService.RenderStepped:Connect(function()
             triggerDelay = 0
         end
     end
-    
-    -- SPIN логика (быстрое вращение, можно ходить)
+
     if SpinActive then
         local char = LocalPlayer.Character
         if char then
@@ -697,7 +688,17 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- ESP
+-- Функции очистки ESP при смерти/выходе
+local function RemoveESPForPlayer(player)
+    local data = ESPCache[player]
+    if data then
+        for _, obj in ipairs(data) do
+            pcall(function() obj:Remove() end)
+        end
+        ESPCache[player] = nil
+    end
+end
+
 local function CreateESPForPlayer(player)
     if not ESPActive then return end
     local data = {}
@@ -736,6 +737,13 @@ local function CreateESPForPlayer(player)
     table.insert(data, distText)
 
     ESPCache[player] = data
+
+    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.Died:Connect(function()
+            RemoveESPForPlayer(player)
+        end)
+    end
 end
 
 function EnableESP()
@@ -756,6 +764,10 @@ function DisableESP()
     end
     ESPCache = {}
 end
+
+Players.PlayerRemoving:Connect(function(player)
+    RemoveESPForPlayer(player)
+end)
 
 RunService.RenderStepped:Connect(function()
     if ESPActive then
@@ -825,7 +837,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Chams
 function EnableChams()
     ChamsActive = true
     for _, player in ipairs(Players:GetPlayers()) do
@@ -855,17 +866,14 @@ function DisableChams()
     ChamsObjects = {}
 end
 
--- Fly
 function EnableFly()
     FlyActive = true
     local char = LocalPlayer.Character
     if char then
-        local hrp = char:FindFirstChild("HumanoidRootPart")
         local humanoid = char:FindFirstChild("Humanoid")
-        if humanoid and hrp then
+        if humanoid then
             humanoid.PlatformStand = true
             humanoid.WalkSpeed = 0
-            hrp.AssemblyLinearVelocity = Vector3.new(0, Config.Fly.HeightOffset, 0)
         end
     end
 end
@@ -886,7 +894,6 @@ function DisableFly()
     end
 end
 
--- Speed
 function EnableSpeed()
     SpeedActive = true
     local char = LocalPlayer.Character
@@ -905,7 +912,6 @@ function DisableSpeed()
     end
 end
 
--- Spin (вместо AntiAim)
 function EnableSpin()
     SpinActive = true
 end
@@ -914,15 +920,22 @@ function DisableSpin()
     SpinActive = false
 end
 
--- Collisions
+-- ИСПРАВЛЕНИЕ КОЛЛИЗИЙ (Проходим через ВСЕ стены)
 function EnableCollisions()
     CollisionsActive = true
+    -- Отключаем у персонажа
     local char = LocalPlayer.Character
     if char then
         for _, desc in ipairs(char:GetDescendants()) do
             if desc:IsA("BasePart") then
                 desc.CanCollide = false
             end
+        end
+    end
+    -- Отключаем у всего мира
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.CanCollide = false
         end
     end
 end
@@ -937,14 +950,27 @@ function DisableCollisions()
             end
         end
     end
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.CanCollide = true
+        end
+    end
 end
 
--- Логика Fly, Speed, BunnyHop
 RunService.Heartbeat:Connect(function()
     local currentTick = tick()
     if currentTick - LastFrameTime > 0 then
         CurrentFPS = math.floor(1 / (currentTick - LastFrameTime))
         LastFrameTime = currentTick
+    end
+
+    -- Постоянно перепроверяем коллизии, чтобы игра не могла их вернуть
+    if CollisionsActive then
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") and v.CanCollide then
+                v.CanCollide = false
+            end
+        end
     end
 
     if Config.BunnyHop.Enabled then
@@ -967,24 +993,24 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- ИСПРАВЛЕНИЕ ПОЛЁТА (Джойстик теперь работает в разные стороны)
 RunService.RenderStepped:Connect(function()
     if FlyActive and LocalPlayer.Character then
         local char = LocalPlayer.Character
         local hrp = char:FindFirstChild("HumanoidRootPart")
         local humanoid = char:FindFirstChild("Humanoid")
         if hrp and humanoid then
-            local moveDirection = Vector3.new(0,0,0)
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDirection = moveDirection + Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDirection = moveDirection - Camera.CFrame.LookVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDirection = moveDirection - Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDirection = moveDirection + Camera.CFrame.RightVector end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDirection = moveDirection + Vector3.new(0,1,0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDirection = moveDirection - Vector3.new(0,1,0) end
-            if moveDirection.Magnitude > 0 then
-                hrp.AssemblyLinearVelocity = moveDirection.Unit * Config.Fly.Speed
-            else
-                hrp.AssemblyLinearVelocity = Vector3.new(0, Config.Fly.HeightOffset, 0)
+            local moveDir = humanoid.MoveDirection
+            local vel = moveDir * Config.Fly.Speed
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) or humanoid.Jump then
+                vel = vel + Vector3.new(0, 50, 0)
+                humanoid.Jump = false
             end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+                vel = vel - Vector3.new(0, 50, 0)
+            end
+            vel = vel + Vector3.new(0, Config.Fly.HeightOffset, 0)
+            hrp.AssemblyLinearVelocity = vel
             humanoid.PlatformStand = true
         end
     end
@@ -995,7 +1021,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Водяной знак и скорость (Поверх всех GUI)
 local Watermark = Instance.new("TextLabel")
 Watermark.Size = UDim2.new(0, 200, 0, 20)
 Watermark.Position = UDim2.new(0.5, -100, 0, 5)
@@ -1044,7 +1069,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ИСПРАВЛЕНИЕ ПЕРЕТАСКИВАНИЯ МЕНЮ (Кнопка и экран больше не двигаются вместе)
 local isDraggingTitle = false
 local dragOffsetTitle = Vector2.new()
 
@@ -1061,7 +1085,6 @@ TitleBar.InputEnded:Connect(function(input)
     end
 end)
 
--- Используем TouchMoved для телефона, чтобы камера не двигалась!
 UserInputService.TouchMoved:Connect(function(input)
     if isDraggingTitle then
         MainFrame.Position = UDim2.new(0, input.Position.X - dragOffsetTitle.X, 0, input.Position.Y - dragOffsetTitle.Y)
@@ -1142,7 +1165,6 @@ CloseBtn.TouchTap:Connect(function()
     if FOVCircle then FOVCircle.Visible = false end
 end)
 
--- Авто-респавн для ESP/Chams/Collisions/Spin
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         player.CharacterAdded:Connect(function()
@@ -1166,3 +1188,6 @@ LocalPlayer.CharacterAdded:Connect(function()
         EnableSpin()
     end
 end)
+
+if Config.FOVCircle.Enabled then CreateFOVCircle() end
+print("Hiruku MM2 Script Loaded!")
