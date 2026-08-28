@@ -11,7 +11,7 @@ local Config = {
     AimBot = {Enabled = false, Range = 100},
     Silent = {Enabled = false, Range = 100},
     Trigger = {Enabled = false, Range = 50, Delay = 50},
-    WallHack = {Enabled = false},
+    WallShot = {Enabled = false},
     Chams = {Enabled = false, Transparency = 0.3, FillColor = Color3.fromRGB(255,255,255), OutlineColor = Color3.fromRGB(0,0,0)},
     ESP = {Enabled = false, Box = true, Name = true, Health = true, Distance = true},
     BunnyHop = {Enabled = false, MaxSpeed = 100},
@@ -68,7 +68,7 @@ local circleCorner = Instance.new("UICorner")
 circleCorner.CornerRadius = UDim.new(0, 10)
 circleCorner.Parent = CircleButton
 
--- МЕНЮ (Закругление усилено)
+-- МЕНЮ (Сильное закругление)
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 450, 0, 400)
 MainFrame.Position = UDim2.new(0.5, -225, 0.5, -200)
@@ -82,7 +82,7 @@ MainFrame.ZIndex = 400
 MainFrame.Parent = ScreenGui
 
 local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 12) -- Более сильное закругление
+mainCorner.CornerRadius = UDim.new(0, 16) -- Усиленное закругление
 mainCorner.Parent = MainFrame
 
 local TitleBar = Instance.new("Frame")
@@ -135,6 +135,7 @@ ContentArea.ScrollBarThickness = 3
 ContentArea.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
 ContentArea.Parent = MainFrame
 
+-- Чистые названия разделов (без лишних надписей)
 local Sections = {"Combat", "Visuals", "Movement", "Misc"}
 local TabsLayout = Instance.new("UIListLayout")
 TabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -149,7 +150,7 @@ for i, name in ipairs(Sections) do
     btn.Size = UDim2.new(0, 90, 0, 35)
     btn.Position = UDim2.new(0, 5, 0, (i-1) * 40)
     btn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    btn.Text = name
+    btn.Text = name -- Только название, никакого лишнего текста
     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
     btn.TextScaled = false
     btn.Font = Enum.Font.Code
@@ -285,8 +286,6 @@ local function CreateToggle(parent, label, path)
                 if Config.Spin.Enabled then EnableSpin() else DisableSpin() end
             elseif path[1] == "Collisions" and path[2] == "Enabled" then
                 if Config.Collisions.Enabled then EnableCollisions() else DisableCollisions() end
-            elseif path[1] == "WallHack" and path[2] == "Enabled" then
-                -- Wall Hack doesn't need special enabling, it changes attack logic
             end
         end
     end)
@@ -527,9 +526,9 @@ bhopPanel.Size = UDim2.new(1, -10, 0, 100)
 bhopPanel.Position = UDim2.new(0, 5, 0, 260)
 
 local MiscTab = AllTabs["Misc"]
-local wallHackPanel = CreateSettingPanel(MiscTab, "Wall Hack")
-CreateToggle(wallHackPanel, "Enable", {"WallHack","Enabled"})
-wallHackPanel.Size = UDim2.new(1, -10, 0, 60)
+local wallShotPanel = CreateSettingPanel(MiscTab, "Wall Shot")
+CreateToggle(wallShotPanel, "Enable", {"WallShot","Enabled"})
+wallShotPanel.Size = UDim2.new(1, -10, 0, 60)
 
 local spinPanel = CreateSettingPanel(MiscTab, "Spin")
 CreateToggle(spinPanel, "Enable", {"Spin","Enabled"})
@@ -586,7 +585,7 @@ end
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
 
--- Вспомогательные функции
+-- Вспомогательные функции поиска
 local function FindTorso(char)
     return char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("LowerTorso") or char:FindFirstChild("HumanoidRootPart")
 end
@@ -595,38 +594,15 @@ local function FindHead(char)
     return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart")
 end
 
--- Функция видимости
-local function IsTargetVisible(target)
-    local char = LocalPlayer.Character
-    if not char then return false end
-    local myHrp = char:FindFirstChild("HumanoidRootPart")
-    local targetChar = target.Character
-    if not myHrp or not targetChar then return false end
-    local targetHead = FindHead(targetChar)
-    if not targetHead then return false end
-
-    local origin = myHrp.Position
-    local destination = targetHead.Position
-    local delta = destination - origin
-    local raycastResult = workspace:Raycast(origin, delta)
-    if raycastResult then
-        local hitPart = raycastResult.Instance
-        if hitPart ~= targetHead and hitPart.Parent ~= targetChar then
-            return false
-        end
-    end
-    return true
-end
-
--- Поиск цели. Если WallHack включен, видимость не проверяется.
+-- Цели (видимые / сквозь стены)
 local function GetClosestTargetByDistance(range, ignoreWalls)
     local closest = nil
     local bestDist = range
     local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myPos then return nil end
+
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            if not ignoreWalls and not IsTargetVisible(player) then continue end
             local hrp = player.Character:FindFirstChild("HumanoidRootPart") or FindTorso(player.Character)
             if hrp then
                 local dist = (myPos.Position - hrp.Position).Magnitude
@@ -645,7 +621,6 @@ local function GetClosestTargetByScreen(range, ignoreWalls)
     local bestDist = range
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            if not ignoreWalls and not IsTargetVisible(player) then continue end
             local head = FindHead(player.Character)
             if head then
                 local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
@@ -662,49 +637,49 @@ local function GetClosestTargetByScreen(range, ignoreWalls)
     return closest
 end
 
--- ПЕРЕХВАТ ВЫСТРЕЛА / Silent Aim / WallHack
+-- Функция атаки (Получение координат головы и отправка пули)
 local function AttemptAttack()
-    if Config.Silent.Enabled or Config.WallHack.Enabled then
-        local ignoreWalls = Config.WallHack.Enabled
-        local target = GetClosestTargetByDistance(Config.Silent.Range, ignoreWalls)
-        if target and target.Character then
-            local aimPart = FindHead(target.Character)
-            if aimPart then
-                -- Если Silent Aim или WallHack: отправляем координаты цели в RemoteEvent (для пули)
-                -- Наводим камеру на цель (чтобы пуля "вылетела" в нужную сторону)
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
-                
-                -- Активируем Tool
-                local char = LocalPlayer.Character
-                if char then
-                    for _, child in ipairs(char:GetChildren()) do
-                        if child:IsA("Tool") then
-                            pcall(function() child:Activate() end)
-                        end
+    local ignoreWalls = Config.WallShot.Enabled
+    local target = GetClosestTargetByDistance(Config.Silent.Range, ignoreWalls)
+    
+    if target and target.Character then
+        -- Берем точные координаты головы
+        local aimPart = FindHead(target.Character)
+        if aimPart then
+            -- Наводим камеру на голову
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
+            
+            -- Активируем инструмент
+            local char = LocalPlayer.Character
+            if char then
+                for _, child in ipairs(char:GetChildren()) do
+                    if child:IsA("Tool") then
+                        pcall(function() child:Activate() end)
                     end
                 end
-                -- Отправляем координаты цели в RemoteEvent (для обхода стен)
-                for _, remote in ipairs(ReplicatedStorage:GetChildren()) do
-                    if remote:IsA("RemoteEvent") then
-                        pcall(function() remote:FireServer(aimPart.Position) end)
-                    end
+            end
+            
+            -- Отправляем координаты в RemoteEvent (пуля летит в цель)
+            for _, remote in ipairs(ReplicatedStorage:GetChildren()) do
+                if remote:IsA("RemoteEvent") then
+                    pcall(function() remote:FireServer(aimPart.Position) end)
                 end
             end
         end
     end
 end
 
--- Перехват клика для Silent Aim / WallHack
+-- Выстрел
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        if (Config.Silent.Enabled or Config.WallHack.Enabled) and not MenuOpen then
+        if Config.Silent.Enabled and not MenuOpen then
             AttemptAttack()
         end
     end
 end)
 
--- Обработка AimBot наведения
+-- Регулярная логика AimBot
 RunService.RenderStepped:Connect(function()
     if Config.FOVCircle.Enabled and FOVCircle then
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
@@ -718,9 +693,9 @@ RunService.RenderStepped:Connect(function()
     end
 
     if Config.AimBot.Enabled and not MenuOpen then
-        local ignoreWalls = Config.WallHack.Enabled
-        local target = GetClosestTargetByScreen(Config.FOV.Radius, ignoreWalls)
-        if not target then target = GetClosestTargetByDistance(Config.AimBot.Range, ignoreWalls) end
+        -- AimBot целится и наводит камеру, пулю не шлет
+        local target = GetClosestTargetByScreen(Config.FOV.Radius)
+        if not target then target = GetClosestTargetByDistance(Config.AimBot.Range) end
         if target and target.Character then
             local aimPart = FindHead(target.Character)
             if aimPart then
@@ -732,7 +707,7 @@ RunService.RenderStepped:Connect(function()
     if Config.Trigger.Enabled and not MenuOpen then
         triggerDelay = triggerDelay + 1
         if triggerDelay >= Config.Trigger.Delay then
-            local ignoreWalls = Config.WallHack.Enabled
+            local ignoreWalls = Config.WallShot.Enabled
             local target = GetClosestTargetByDistance(Config.Trigger.Range, ignoreWalls)
             if target then
                 AttemptAttack()
@@ -752,7 +727,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ESP (с удалением при смерти)
+-- Функции ESP (Исправлено удаление хитбоксов)
 local function RemoveESPForPlayer(player)
     local data = ESPCache[player]
     if data then
@@ -765,6 +740,8 @@ end
 
 local function CreateESPForPlayer(player)
     if not ESPActive then return end
+    if not player.Character then return end
+    
     local data = {}
     local box = Drawing.new("Square")
     box.Visible = false
@@ -802,11 +779,19 @@ local function CreateESPForPlayer(player)
 
     ESPCache[player] = data
 
-    local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+    -- Очистка при смерти или удалении персонажа
+    local function onCharacterRemoved()
+        RemoveESPForPlayer(player)
+    end
+
+    local char = player.Character
+    char.AncestryChanged:Connect(function(_, parent)
+        if not parent then onCharacterRemoved() end
+    end)
+    
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
     if humanoid then
-        humanoid.Died:Connect(function()
-            RemoveESPForPlayer(player)
-        end)
+        humanoid.Died:Connect(onCharacterRemoved)
     end
 end
 
@@ -984,7 +969,7 @@ function DisableSpin()
     SpinActive = false
 end
 
--- КОЛЛИЗИИ (правильно: не проваливаемся сквозь пол)
+-- Коллизии
 function EnableCollisions()
     CollisionsActive = true
     local char = LocalPlayer.Character
@@ -1038,17 +1023,20 @@ RunService.Heartbeat:Connect(function()
         LastFrameTime = currentTick
     end
 
+    -- Исправленный Bunny Hop (меняет скорость и прыгает)
     if Config.BunnyHop.Enabled then
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
             local char = LocalPlayer.Character
             if char then
                 local humanoid = char:FindFirstChild("Humanoid")
-                if humanoid and humanoid.FloorMaterial ~= Enum.Material.Air then
-                    humanoid.Jump = true
-                    if tick() - LastBhopTime > 0.1 then
-                        BhopSpeed = math.min(BhopSpeed + 5, Config.BunnyHop.MaxSpeed)
-                        humanoid.WalkSpeed = BhopSpeed
-                        LastBhopTime = tick()
+                if humanoid then
+                    if humanoid.FloorMaterial ~= Enum.Material.Air then
+                        humanoid.Jump = true
+                        if tick() - LastBhopTime > 0.1 then
+                            BhopSpeed = math.min(BhopSpeed + 5, Config.BunnyHop.MaxSpeed)
+                            humanoid.WalkSpeed = BhopSpeed
+                            LastBhopTime = tick()
+                        end
                     end
                 end
             end
@@ -1085,6 +1073,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- Водяной знак и скорость
 local Watermark = Instance.new("TextLabel")
 Watermark.Size = UDim2.new(0, 200, 0, 20)
 Watermark.Position = UDim2.new(0.5, -100, 0, 5)
@@ -1133,25 +1122,36 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ПЕРЕТАСКИВАНИЕ МЕНЮ ЗА ЛЮБОЙ КРАЙ/ФОН
+-- ПЕРЕТАСКИВАНИЕ МЕНЮ ЗА ЛЮБОЙ КРАЙ (ИСПРАВЛЕНО)
 local isDraggingMenu = false
 local dragOffsetMenu = Vector2.new()
 
+-- Перетаскивание за заголовок
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isDraggingMenu = true
+        dragOffsetMenu = Vector2.new(input.Position.X - MainFrame.AbsolutePosition.X, input.Position.Y - MainFrame.AbsolutePosition.Y)
+    end
+end)
+
+TitleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isDraggingMenu = false
+    end
+end)
+
+-- Перетаскивание за само меню (если нажали на пустое место)
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        -- Проверяем, что не нажали на кнопки/переключатели внутри
         local objects = UserInputService:GetGuiObjectsAtPosition(input.Position.X, input.Position.Y)
-        local isInteractable = false
+        local isClickable = false
         for _, obj in ipairs(objects) do
-            if obj:IsA("TextButton") or obj:IsA("TextLabel") or obj:IsA("ImageButton") or obj:IsA("Frame") then
-                if obj.Name ~= "MainFrame" and obj.Name ~= "TitleBar" and obj.Name ~= "ContentArea" then
-                    isInteractable = true
-                    break
-                end
+            if obj:IsA("TextButton") or obj:IsA("ImageButton") then
+                isClickable = true
+                break
             end
         end
-
-        if not isInteractable or objects[1] == MainFrame or objects[1] == TitleBar or objects[1] == ContentArea then
+        if not isClickable then
             isDraggingMenu = true
             dragOffsetMenu = Vector2.new(input.Position.X - MainFrame.AbsolutePosition.X, input.Position.Y - MainFrame.AbsolutePosition.Y)
         end
@@ -1176,7 +1176,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- КНОПКА ОТКРЫТИЯ
+-- Кнопка открытия меню
 local isDraggingCircle = false
 local dragStartCircle = Vector2.new()
 local dragOffsetCircle = Vector2.new()
