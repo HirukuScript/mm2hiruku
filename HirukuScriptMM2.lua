@@ -48,17 +48,17 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 99999
 ScreenGui.IgnoreGuiInset = true
 
--- Новая кнопка меню (чёрный квадрат с белой обводкой и белой H)
+-- КНОПКА (больше, тонкая белая обводка)
 local CircleButton = Instance.new("TextButton")
-CircleButton.Size = UDim2.new(0, 45, 0, 45)
-CircleButton.Position = UDim2.new(0.02, 0, 0.5, -22)
+CircleButton.Size = UDim2.new(0, 50, 0, 50)
+CircleButton.Position = UDim2.new(0.02, 0, 0.5, -25)
 CircleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 CircleButton.Text = "H"
 CircleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 CircleButton.TextScaled = false
 CircleButton.TextSize = 24
 CircleButton.Font = Enum.Font.Code
-CircleButton.BorderSizePixel = 2
+CircleButton.BorderSizePixel = 1
 CircleButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
 CircleButton.AutoButtonColor = false
 CircleButton.ZIndex = 500
@@ -578,12 +578,36 @@ end
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
 
+-- Функции поиска цели
 local function FindTorso(char)
     return char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("LowerTorso") or char:FindFirstChild("HumanoidRootPart")
 end
 
 local function FindHead(char)
     return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart")
+end
+
+-- Проверка видимости через Raycast
+local function IsTargetVisible(target)
+    local char = LocalPlayer.Character
+    if not char then return false end
+    local myHrp = char:FindFirstChild("HumanoidRootPart")
+    local targetChar = target.Character
+    if not myHrp or not targetChar then return false end
+    local targetHead = FindHead(targetChar)
+    if not targetHead then return false end
+
+    local origin = myHrp.Position
+    local destination = targetHead.Position
+    local delta = destination - origin
+    local raycastResult = workspace:Raycast(origin, delta)
+    if raycastResult then
+        local hitPart = raycastResult.Instance
+        if hitPart ~= targetHead and hitPart.Parent ~= targetChar then
+            return false
+        end
+    end
+    return true
 end
 
 local function GetClosestTargetByDistance(range)
@@ -593,12 +617,35 @@ local function GetClosestTargetByDistance(range)
     if not myPos then return nil end
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            if not IsTargetVisible(player) then continue end -- не таргетим сквозь стены
             local hrp = player.Character:FindFirstChild("HumanoidRootPart") or FindTorso(player.Character)
             if hrp then
                 local dist = (myPos.Position - hrp.Position).Magnitude
                 if dist < bestDist then
                     bestDist = dist
                     closest = player
+                end
+            end
+        end
+    end
+    return closest
+end
+
+local function GetClosestTargetByScreen(range)
+    local closest = nil
+    local bestDist = range
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            if not IsTargetVisible(player) then continue end
+            local head = FindHead(player.Character)
+            if head then
+                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local dist = (pos - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
+                    if dist < bestDist then
+                        bestDist = dist
+                        closest = player
+                    end
                 end
             end
         end
@@ -635,7 +682,8 @@ RunService.RenderStepped:Connect(function()
     end
 
     if Config.AimBot.Enabled and not MenuOpen then
-        local target = GetClosestTargetByDistance(Config.AimBot.Range)
+        local target = GetClosestTargetByScreen(Config.FOV.Radius)
+        if not target then target = GetClosestTargetByDistance(Config.AimBot.Range) end
         if target and target.Character then
             local aimPart = FindHead(target.Character)
             if aimPart then
@@ -681,14 +729,18 @@ UserInputService.InputBegan:Connect(function(input, processed)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         if Config.Silent.Enabled and not MenuOpen then
             local target = GetClosestTargetByDistance(Config.Silent.Range)
-            if target then
-                TryAttack()
+            if target and target.Character then
+                local aimPart = FindHead(target.Character)
+                if aimPart then
+                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position) -- наводим на цель
+                    TryAttack() -- стреляем
+                end
             end
         end
     end
 end)
 
--- Функции очистки ESP при смерти/выходе
+-- ESP
 local function RemoveESPForPlayer(player)
     local data = ESPCache[player]
     if data then
@@ -920,36 +972,28 @@ function DisableSpin()
     SpinActive = false
 end
 
--- ИСПРАВЛЕНИЕ КОЛЛИЗИЙ (Проходим через ВСЕ стены)
+-- КОЛЛИЗИИ (проходим сквозь стены, но не сквозь пол)
 function EnableCollisions()
     CollisionsActive = true
-    -- Отключаем у персонажа
     local char = LocalPlayer.Character
     if char then
-        for _, desc in ipairs(char:GetDescendants()) do
-            if desc:IsA("BasePart") then
-                desc.CanCollide = false
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local playerY = hrp.Position.Y
+            for _, v in ipairs(workspace:GetDescendants()) do
+                if v:IsA("BasePart") and v.CanCollide then
+                    -- Оставляем коллизию у пола и объектов ниже персонажа
+                    if v.Position.Y >= playerY - 1 then
+                        v.CanCollide = false
+                    end
+                end
             end
-        end
-    end
-    -- Отключаем у всего мира
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            v.CanCollide = false
         end
     end
 end
 
 function DisableCollisions()
     CollisionsActive = false
-    local char = LocalPlayer.Character
-    if char then
-        for _, desc in ipairs(char:GetDescendants()) do
-            if desc:IsA("BasePart") then
-                desc.CanCollide = true
-            end
-        end
-    end
     for _, v in ipairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
             v.CanCollide = true
@@ -957,20 +1001,31 @@ function DisableCollisions()
     end
 end
 
+-- Постоянное обновление коллизий
+RunService.Heartbeat:Connect(function()
+    if CollisionsActive then
+        local char = LocalPlayer.Character
+        if char then
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local playerY = hrp.Position.Y
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if v:IsA("BasePart") and v.CanCollide then
+                        if v.Position.Y >= playerY - 1 then
+                            v.CanCollide = false
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
 RunService.Heartbeat:Connect(function()
     local currentTick = tick()
     if currentTick - LastFrameTime > 0 then
         CurrentFPS = math.floor(1 / (currentTick - LastFrameTime))
         LastFrameTime = currentTick
-    end
-
-    -- Постоянно перепроверяем коллизии, чтобы игра не могла их вернуть
-    if CollisionsActive then
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v:IsA("BasePart") and v.CanCollide then
-                v.CanCollide = false
-            end
-        end
     end
 
     if Config.BunnyHop.Enabled then
@@ -993,7 +1048,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ИСПРАВЛЕНИЕ ПОЛЁТА (Джойстик теперь работает в разные стороны)
+-- ПОЛЁТ (исправлен: можно летать в разные стороны с джойстиком)
 RunService.RenderStepped:Connect(function()
     if FlyActive and LocalPlayer.Character then
         local char = LocalPlayer.Character
@@ -1021,6 +1076,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- Водяной знак и индикатор скорости
 local Watermark = Instance.new("TextLabel")
 Watermark.Size = UDim2.new(0, 200, 0, 20)
 Watermark.Position = UDim2.new(0.5, -100, 0, 5)
@@ -1069,6 +1125,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+-- Перетаскивание меню (не влияет на камеру)
 local isDraggingTitle = false
 local dragOffsetTitle = Vector2.new()
 
@@ -1097,6 +1154,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
+-- Кнопка открытия меню
 local isDraggingCircle = false
 local dragStartCircle = Vector2.new()
 local dragOffsetCircle = Vector2.new()
@@ -1165,6 +1223,7 @@ CloseBtn.TouchTap:Connect(function()
     if FOVCircle then FOVCircle.Visible = false end
 end)
 
+-- Автоматический респавн для ESP, Chams, Collisions, Spin
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         player.CharacterAdded:Connect(function()
