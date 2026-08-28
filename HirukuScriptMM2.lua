@@ -8,15 +8,16 @@ local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
 local Config = {
-    AimBot = {Enabled = false, Range = 100, Mode = "Instant"},
-    Silent = {Enabled = false, Range = 100, Mode = "Instant"},
+    AimBot = {Enabled = false, Range = 100},
+    Silent = {Enabled = false, Range = 100},
     Trigger = {Enabled = false, Range = 50, Delay = 50},
-    Chams = {Enabled = false, Mode = "Flat", FillColor = Color3.fromRGB(255,255,255), OutlineColor = Color3.fromRGB(0,0,0)},
+    Chams = {Enabled = false, Transparency = 0.3, FillColor = Color3.fromRGB(255,255,255), OutlineColor = Color3.fromRGB(0,0,0)},
     ESP = {Enabled = false, Box = true, Name = true, Health = true, Distance = true},
     BunnyHop = {Enabled = false, MaxSpeed = 100},
     Speed = {Enabled = false, Speed = 50},
     Fly = {Enabled = false, Speed = 50, HeightOffset = 10},
-    AntiAim = {Enabled = false, Mode = "Jitter", SpinSpeed = 90, HeadDown = false},
+    Spin = {Enabled = false, Speed = 360},
+    Collisions = {Enabled = false},
     Watermark = {Enabled = true},
     FOV = {Radius = 35, Thickness = 2, Color = Color3.fromRGB(255,255,255)},
     FOVCircle = {Enabled = true},
@@ -28,7 +29,8 @@ local ESPActive = false
 local ChamsActive = false
 local FlyActive = false
 local SpeedActive = false
-local AntiAimActive = false
+local SpinActive = false
+local CollisionsActive = false
 local CurrentFPS = 0
 local LastFrameTime = tick()
 local FOVCircle = nil
@@ -38,30 +40,39 @@ local BhopSpeed = 16
 local LastBhopTime = 0
 local triggerDelay = 0
 
+-- Создание GUI и верхний слой
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HirukuInternal"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.DisplayOrder = 99999
+ScreenGui.IgnoreGuiInset = true
 
+-- НОВАЯ КНОПКА МЕНЮ (Белый фон, красный треугольник, маленькая)
 local CircleButton = Instance.new("TextButton")
-CircleButton.Size = UDim2.new(0, 60, 0, 60)
-CircleButton.Position = UDim2.new(0.02, 0, 0.5, -30)
-CircleButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-CircleButton.Text = "H"
-CircleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CircleButton.TextScaled = true
-CircleButton.Font = Enum.Font.Code
-CircleButton.BorderSizePixel = 2
-CircleButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
+CircleButton.Size = UDim2.new(0, 30, 0, 30)
+CircleButton.Position = UDim2.new(0.02, 0, 0.5, -15)
+CircleButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+CircleButton.Text = ""
 CircleButton.AutoButtonColor = false
+CircleButton.ZIndex = 500
 CircleButton.Parent = ScreenGui
 
 local circleCorner = Instance.new("UICorner")
 circleCorner.CornerRadius = UDim.new(1, 0)
 circleCorner.Parent = CircleButton
 
-TweenService:Create(CircleButton, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Size = UDim2.new(0, 62, 0, 62)}):Play()
+local CircleText = Instance.new("TextLabel")
+CircleText.Size = UDim2.new(1, 0, 1, 0)
+CircleText.BackgroundTransparency = 1
+CircleText.Text = "▶"
+CircleText.TextColor3 = Color3.fromRGB(255, 0, 0)
+CircleText.TextScaled = true
+CircleText.Font = Enum.Font.Code
+CircleText.Parent = CircleButton
 
+-- Меню (С большим ZIndex)
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 450, 0, 400)
 MainFrame.Position = UDim2.new(0.5, -225, 0.5, -200)
@@ -70,6 +81,8 @@ MainFrame.BackgroundTransparency = 0
 MainFrame.BorderSizePixel = 1
 MainFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
 MainFrame.Visible = false
+MainFrame.Active = true
+MainFrame.ZIndex = 400
 MainFrame.Parent = ScreenGui
 
 local mainCorner = Instance.new("UICorner")
@@ -80,6 +93,7 @@ local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 35)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 TitleBar.BorderSizePixel = 0
+TitleBar.Active = true
 TitleBar.Parent = MainFrame
 
 local TitleText = Instance.new("TextLabel")
@@ -126,7 +140,6 @@ ContentArea.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
 ContentArea.Parent = MainFrame
 
 local Sections = {"Combat", "Visuals", "Movement", "Misc"}
-
 local TabsLayout = Instance.new("UIListLayout")
 TabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 TabsLayout.Padding = UDim.new(0, 4)
@@ -272,8 +285,10 @@ local function CreateToggle(parent, label, path)
                 if Config.Fly.Enabled then EnableFly() else DisableFly() end
             elseif path[1] == "Speed" and path[2] == "Enabled" then
                 if Config.Speed.Enabled then EnableSpeed() else DisableSpeed() end
-            elseif path[1] == "AntiAim" and path[2] == "Enabled" then
-                if Config.AntiAim.Enabled then EnableAntiAim() else DisableAntiAim() end
+            elseif path[1] == "Spin" and path[2] == "Enabled" then
+                if Config.Spin.Enabled then EnableSpin() else DisableSpin() end
+            elseif path[1] == "Collisions" and path[2] == "Enabled" then
+                if Config.Collisions.Enabled then EnableCollisions() else DisableCollisions() end
             end
         end
     end)
@@ -450,97 +465,25 @@ local function CreateColorButton(parent, label, path, colorList)
     end
 end
 
-local function CreateDropdown(parent, label, path, options)
-    local holder = Instance.new("Frame")
-    holder.Size = UDim2.new(1, -10, 0, 30)
-    holder.BackgroundTransparency = 1
-    holder.Parent = parent
-
-    local text = Instance.new("TextLabel")
-    text.Size = UDim2.new(0.6, 0, 1, 0)
-    text.Position = UDim2.new(0, 0, 0, 0)
-    text.BackgroundTransparency = 1
-    text.Text = label
-    text.TextColor3 = Color3.fromRGB(220, 220, 220)
-    text.TextXAlignment = Enum.TextXAlignment.Left
-    text.TextScaled = false
-    text.Font = Enum.Font.Code
-    text.TextSize = 12
-    text.Parent = holder
-
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0.35, 0, 0.8, 0)
-    btn.Position = UDim2.new(0.65, 0, 0.1, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextScaled = false
-    btn.Font = Enum.Font.Code
-    btn.TextSize = 12
-    btn.BorderSizePixel = 1
-    btn.BorderColor3 = Color3.fromRGB(80, 80, 80)
-    btn.Parent = holder
-
-    local current = Config
-    for _, v in ipairs(path) do current = current[v] end
-    btn.Text = current
-
-    btn.MouseButton1Click:Connect(function()
-        local index = 1
-        for i, opt in ipairs(options) do
-            if opt == current then index = i end
-        end
-        index = (index % #options) + 1
-        current = options[index]
-        btn.Text = current
-
-        -- Применяем изменения
-        if path[1] == "Chams" and path[2] == "Mode" then
-            local realPath = path
-            for i = 1, #realPath - 1 do
-                -- простая проверка
-            end
-            -- Обновить всех чams объектов
-            for _, obj in ipairs(ChamsObjects) do
-                if obj:IsA("Highlight") then
-                    ApplyChamsMode(obj)
-                end
-            end
-        end
-    end)
-end
-
--- Функция применения режима Chams
-local function ApplyChamsMode(highlight)
-    if Config.Chams.Mode == "Flat" then
-        highlight.FillTransparency = 0.3
-        highlight.OutlineTransparency = 0.5
-    elseif Config.Chams.Mode == "Wireframe" then
-        highlight.FillTransparency = 1
-        highlight.OutlineTransparency = 0
-    elseif Config.Chams.Mode == "Glass" then
-        highlight.FillTransparency = 0.6
-        highlight.OutlineTransparency = 0.2
-    end
-end
-
+-- Заполнение вкладок
 local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
 CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"})
 CreateSlider(aimPanel, "Range", {"AimBot","Range"}, 1, 100, false)
-aimPanel.Size = UDim2.new(1, -10, 0, 130)
+aimPanel.Size = UDim2.new(1, -10, 0, 100)
 
 local silentPanel = CreateSettingPanel(CombatTab, "Silent Aim")
 CreateToggle(silentPanel, "Enable", {"Silent","Enabled"})
 CreateSlider(silentPanel, "Range", {"Silent","Range"}, 1, 100, false)
-silentPanel.Size = UDim2.new(1, -10, 0, 130)
-silentPanel.Position = UDim2.new(0, 5, 0, 140)
+silentPanel.Size = UDim2.new(1, -10, 0, 100)
+silentPanel.Position = UDim2.new(0, 5, 0, 110)
 
 local triggerPanel = CreateSettingPanel(CombatTab, "Trigger")
 CreateToggle(triggerPanel, "Enable", {"Trigger","Enabled"})
 CreateSlider(triggerPanel, "Range", {"Trigger","Range"}, 1, 50, false)
 CreateSlider(triggerPanel, "Delay", {"Trigger","Delay"}, 10, 500, false)
 triggerPanel.Size = UDim2.new(1, -10, 0, 130)
-triggerPanel.Position = UDim2.new(0, 5, 0, 280)
+triggerPanel.Position = UDim2.new(0, 5, 0, 220)
 
 local VisualsTab = AllTabs["Visuals"]
 local fovPanel = CreateSettingPanel(VisualsTab, "FOV Circle")
@@ -561,10 +504,10 @@ espPanel.Position = UDim2.new(0, 5, 0, 180)
 
 local chamsPanel = CreateSettingPanel(VisualsTab, "Chams")
 CreateToggle(chamsPanel, "Enable", {"Chams","Enabled"})
-CreateDropdown(chamsPanel, "Mode", {"Chams","Mode"}, {"Flat", "Wireframe", "Glass"})
+CreateSlider(chamsPanel, "Transparency", {"Chams","Transparency"}, 0, 1, true)
 CreateColorButton(chamsPanel, "Fill", {"Chams","FillColor"}, {Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,255,0), Color3.fromRGB(0,0,255)})
 CreateColorButton(chamsPanel, "Outline", {"Chams","OutlineColor"}, {Color3.fromRGB(0,0,0), Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0), Color3.fromRGB(0,0,255)})
-chamsPanel.Size = UDim2.new(1, -10, 0, 210)
+chamsPanel.Size = UDim2.new(1, -10, 0, 170)
 chamsPanel.Position = UDim2.new(0, 5, 0, 370)
 
 local MovementTab = AllTabs["Movement"]
@@ -583,26 +526,30 @@ flyPanel.Position = UDim2.new(0, 5, 0, 110)
 local bhopPanel = CreateSettingPanel(MovementTab, "Bunny Hop")
 CreateToggle(bhopPanel, "Enable", {"BunnyHop","Enabled"})
 CreateSlider(bhopPanel, "Max Speed", {"BunnyHop","MaxSpeed"}, 16, 200, false)
-bhopPanel.Size = UDim2.new(1, -10, 0, 130)
+bhopPanel.Size = UDim2.new(1, -10, 0, 100)
 bhopPanel.Position = UDim2.new(0, 5, 0, 260)
 
 local MiscTab = AllTabs["Misc"]
-local antiAimPanel = CreateSettingPanel(MiscTab, "Anti-Aim")
-CreateToggle(antiAimPanel, "Enable", {"AntiAim","Enabled"})
-CreateDropdown(antiAimPanel, "Mode", {"AntiAim","Mode"}, {"Jitter", "Spin", "Backwards"})
-CreateSlider(antiAimPanel, "Spin Speed", {"AntiAim","SpinSpeed"}, 30, 360, false)
-CreateToggle(antiAimPanel, "Head Down", {"AntiAim","HeadDown"})
-antiAimPanel.Size = UDim2.new(1, -10, 0, 160)
+-- Новая функция SPIN (вместо AntiAim)
+local spinPanel = CreateSettingPanel(MiscTab, "Spin")
+CreateToggle(spinPanel, "Enable", {"Spin","Enabled"})
+CreateSlider(spinPanel, "Speed", {"Spin","Speed"}, 60, 720, false)
+spinPanel.Size = UDim2.new(1, -10, 0, 130)
+
+local collisionsPanel = CreateSettingPanel(MiscTab, "Collisions")
+CreateToggle(collisionsPanel, "Enable", {"Collisions","Enabled"})
+collisionsPanel.Size = UDim2.new(1, -10, 0, 60)
+collisionsPanel.Position = UDim2.new(0, 5, 0, 140)
 
 local watermarkPanel = CreateSettingPanel(MiscTab, "Watermark")
 CreateToggle(watermarkPanel, "Enable", {"Watermark","Enabled"})
 watermarkPanel.Size = UDim2.new(1, -10, 0, 60)
-watermarkPanel.Position = UDim2.new(0, 5, 0, 170)
+watermarkPanel.Position = UDim2.new(0, 5, 0, 210)
 
 local speedIndPanel = CreateSettingPanel(MiscTab, "Speed Indicator")
 CreateToggle(speedIndPanel, "Enable", {"SpeedIndicator","Enabled"})
 speedIndPanel.Size = UDim2.new(1, -10, 0, 60)
-speedIndPanel.Position = UDim2.new(0, 5, 0, 240)
+speedIndPanel.Position = UDim2.new(0, 5, 0, 280)
 
 local function SwitchTab(name)
     for _, tab in pairs(AllTabs) do
@@ -638,7 +585,7 @@ end
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
 
--- Целеуказание и Логика Aim
+-- Логика AimBot / Silent / Trigger
 local function FindTorso(char)
     return char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("LowerTorso") or char:FindFirstChild("HumanoidRootPart")
 end
@@ -667,38 +614,22 @@ local function GetClosestTargetByDistance(range)
     return closest
 end
 
-local function GetClosestTargetByScreen(range)
-    local closest = nil
-    local bestDist = range
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local head = FindHead(player.Character)
-            if head then
-                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
-                if onScreen then
-                    local dist = (pos - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                    if dist < bestDist then
-                        bestDist = dist
-                        closest = player
-                    end
-                end
+local function TryAttack()
+    local char = LocalPlayer.Character
+    if char then
+        for _, child in ipairs(char:GetChildren()) do
+            if child:IsA("Tool") then
+                pcall(function() child:Activate() end)
             end
         end
     end
-    return closest
-end
-
-local function FireRemoteAt(target)
-    if not target then return end
     for _, remote in ipairs(ReplicatedStorage:GetChildren()) do
         if remote:IsA("RemoteEvent") then
-            pcall(function() remote:FireServer(target) end)
             pcall(function() remote:FireServer("MouseButton1Down") end)
         end
     end
 end
 
--- Логика AimBot / Silent / Trigger
 RunService.RenderStepped:Connect(function()
     if Config.FOVCircle.Enabled and FOVCircle then
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
@@ -712,25 +643,21 @@ RunService.RenderStepped:Connect(function()
     end
 
     if Config.AimBot.Enabled and not MenuOpen then
-        local target = GetClosestTargetByScreen(Config.FOV.Radius)
-        if not target then target = GetClosestTargetByDistance(Config.AimBot.Range) end
+        local target = GetClosestTargetByDistance(Config.AimBot.Range)
         if target and target.Character then
             local aimPart = FindHead(target.Character)
             if aimPart then
                 Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
-                FireRemoteAt(aimPart.Position)
             end
         end
     end
 
     if Config.Silent.Enabled and not MenuOpen then
-        local target = GetClosestTargetByScreen(Config.FOV.Radius)
-        if not target then target = GetClosestTargetByDistance(Config.Silent.Range) end
+        local target = GetClosestTargetByDistance(Config.Silent.Range)
         if target and target.Character then
             local aimPart = FindHead(target.Character)
             if aimPart then
                 Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
-                FireRemoteAt(aimPart.Position)
             end
         end
     end
@@ -739,23 +666,40 @@ RunService.RenderStepped:Connect(function()
         triggerDelay = triggerDelay + 1
         if triggerDelay >= Config.Trigger.Delay then
             local target = GetClosestTargetByDistance(Config.Trigger.Range)
-            if target and target.Character then
-                local aimPart = FindHead(target.Character)
-                if aimPart then
-                    FireRemoteAt(aimPart.Position)
-                end
-                triggerDelay = 0
+            if target then
+                TryAttack()
+            end
+            triggerDelay = 0
+        end
+    end
+    
+    -- SPIN логика (быстрое вращение, можно ходить)
+    if SpinActive then
+        local char = LocalPlayer.Character
+        if char then
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root then
+                root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(Config.Spin.Speed * 3), 0)
             end
         end
     end
 end)
 
--- Хитбоксы (Исправлено, не слетают)
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if Config.Silent.Enabled and not MenuOpen then
+            local target = GetClosestTargetByDistance(Config.Silent.Range)
+            if target then
+                TryAttack()
+            end
+        end
+    end
+end)
+
+-- ESP
 local function CreateESPForPlayer(player)
     if not ESPActive then return end
-    local char = player.Character
-    if not char then return end
-
     local data = {}
     local box = Drawing.new("Square")
     box.Visible = false
@@ -881,7 +825,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Chams (улучшенные режимы)
+-- Chams
 function EnableChams()
     ChamsActive = true
     for _, player in ipairs(Players:GetPlayers()) do
@@ -892,8 +836,9 @@ function EnableChams()
                     highlight.Adornee = desc
                     highlight.FillColor = Config.Chams.FillColor
                     highlight.OutlineColor = Config.Chams.OutlineColor
+                    highlight.FillTransparency = Config.Chams.Transparency
+                    highlight.OutlineTransparency = 0.5
                     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                    ApplyChamsMode(highlight)
                     highlight.Parent = desc
                     table.insert(ChamsObjects, highlight)
                 end
@@ -910,7 +855,7 @@ function DisableChams()
     ChamsObjects = {}
 end
 
--- Остальные функции (Fly, Speed, AntiAim)
+-- Fly
 function EnableFly()
     FlyActive = true
     local char = LocalPlayer.Character
@@ -941,6 +886,7 @@ function DisableFly()
     end
 end
 
+-- Speed
 function EnableSpeed()
     SpeedActive = true
     local char = LocalPlayer.Character
@@ -959,15 +905,41 @@ function DisableSpeed()
     end
 end
 
-function EnableAntiAim()
-    AntiAimActive = true
+-- Spin (вместо AntiAim)
+function EnableSpin()
+    SpinActive = true
 end
 
-function DisableAntiAim()
-    AntiAimActive = false
+function DisableSpin()
+    SpinActive = false
 end
 
--- Логика BunnyHop (ускорение)
+-- Collisions
+function EnableCollisions()
+    CollisionsActive = true
+    local char = LocalPlayer.Character
+    if char then
+        for _, desc in ipairs(char:GetDescendants()) do
+            if desc:IsA("BasePart") then
+                desc.CanCollide = false
+            end
+        end
+    end
+end
+
+function DisableCollisions()
+    CollisionsActive = false
+    local char = LocalPlayer.Character
+    if char then
+        for _, desc in ipairs(char:GetDescendants()) do
+            if desc:IsA("BasePart") then
+                desc.CanCollide = true
+            end
+        end
+    end
+end
+
+-- Логика Fly, Speed, BunnyHop
 RunService.Heartbeat:Connect(function()
     local currentTick = tick()
     if currentTick - LastFrameTime > 0 then
@@ -995,7 +967,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Управление полетом и остальным
 RunService.RenderStepped:Connect(function()
     if FlyActive and LocalPlayer.Character then
         local char = LocalPlayer.Character
@@ -1022,26 +993,9 @@ RunService.RenderStepped:Connect(function()
         local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
         if humanoid then humanoid.WalkSpeed = Config.Speed.Speed end
     end
-
-    if AntiAimActive and LocalPlayer.Character then
-        local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local head = LocalPlayer.Character:FindFirstChild("Head")
-        if root then
-            if Config.AntiAim.Mode == "Jitter" then
-                root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(10 * math.sin(tick() * 10)), 0)
-            elseif Config.AntiAim.Mode == "Spin" then
-                root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(tick() * Config.AntiAim.SpinSpeed), 0)
-            elseif Config.AntiAim.Mode == "Backwards" then
-                root.CFrame = root.CFrame * CFrame.Angles(0, math.rad(180), 0)
-            end
-            if Config.AntiAim.HeadDown and head then
-                head.CFrame = head.CFrame * CFrame.Angles(math.rad(90), 0, 0)
-            end
-        end
-    end
 end)
 
--- Водяной знак и Скорость
+-- Водяной знак и скорость (Поверх всех GUI)
 local Watermark = Instance.new("TextLabel")
 Watermark.Size = UDim2.new(0, 200, 0, 20)
 Watermark.Position = UDim2.new(0.5, -100, 0, 5)
@@ -1051,6 +1005,7 @@ Watermark.TextColor3 = Color3.fromRGB(255,255,255)
 Watermark.TextScaled = true
 Watermark.Font = Enum.Font.Code
 Watermark.Text = "Hiruku | FPS: 0"
+Watermark.ZIndex = 300
 Watermark.Parent = ScreenGui
 
 local watermarkCorner = Instance.new("UICorner")
@@ -1066,6 +1021,7 @@ SpeedLabel.TextColor3 = Color3.fromRGB(255,255,255)
 SpeedLabel.TextScaled = true
 SpeedLabel.Font = Enum.Font.Code
 SpeedLabel.Text = "Speed: 0"
+SpeedLabel.ZIndex = 300
 SpeedLabel.Parent = ScreenGui
 
 local speedCorner = Instance.new("UICorner")
@@ -1088,7 +1044,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Перетаскивание меню и кнопки
+-- ИСПРАВЛЕНИЕ ПЕРЕТАСКИВАНИЯ МЕНЮ (Кнопка и экран больше не двигаются вместе)
 local isDraggingTitle = false
 local dragOffsetTitle = Vector2.new()
 
@@ -1105,8 +1061,15 @@ TitleBar.InputEnded:Connect(function(input)
     end
 end)
 
+-- Используем TouchMoved для телефона, чтобы камера не двигалась!
+UserInputService.TouchMoved:Connect(function(input)
+    if isDraggingTitle then
+        MainFrame.Position = UDim2.new(0, input.Position.X - dragOffsetTitle.X, 0, input.Position.Y - dragOffsetTitle.Y)
+    end
+end)
+
 UserInputService.InputChanged:Connect(function(input)
-    if isDraggingTitle and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+    if isDraggingTitle and input.UserInputType == Enum.UserInputType.MouseMovement then
         MainFrame.Position = UDim2.new(0, input.Position.X - dragOffsetTitle.X, 0, input.Position.Y - dragOffsetTitle.Y)
     end
 end)
@@ -1130,8 +1093,18 @@ UserInputService.InputBegan:Connect(function(input)
     end
 end)
 
+UserInputService.TouchMoved:Connect(function(input)
+    if isDraggingCircle then
+        local pos = Vector2.new(input.Position.X, input.Position.Y)
+        if (pos - dragStartCircle).Magnitude > 10 then
+            isClickCircle = false
+            CircleButton.Position = UDim2.new(0, pos.X - dragOffsetCircle.X, 0, pos.Y - dragOffsetCircle.Y)
+        end
+    end
+end)
+
 UserInputService.InputChanged:Connect(function(input)
-    if isDraggingCircle and (input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseMovement) then
+    if isDraggingCircle and input.UserInputType == Enum.UserInputType.MouseMovement then
         local pos = Vector2.new(input.Position.X, input.Position.Y)
         if (pos - dragStartCircle).Magnitude > 10 then
             isClickCircle = false
@@ -1169,7 +1142,7 @@ CloseBtn.TouchTap:Connect(function()
     if FOVCircle then FOVCircle.Visible = false end
 end)
 
--- Авто-респавн Chams и ESP
+-- Авто-респавн для ESP/Chams/Collisions/Spin
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         player.CharacterAdded:Connect(function()
@@ -1183,5 +1156,13 @@ for _, player in ipairs(Players:GetPlayers()) do
     end
 end
 
-if Config.FOVCircle.Enabled then CreateFOVCircle() end
-print("Hiruku Internal Loaded!")
+LocalPlayer.CharacterAdded:Connect(function()
+    if CollisionsActive then
+        wait(0.5)
+        EnableCollisions()
+    end
+    if SpinActive then
+        wait(0.5)
+        EnableSpin()
+    end
+end)
