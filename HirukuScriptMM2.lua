@@ -2,7 +2,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
-local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
@@ -23,7 +22,8 @@ local Config = {
     FOV = {Radius = 70, Thickness = 2, Color = Color3.fromRGB(255,255,255)},
     FOVCircle = {Enabled = true},
     SpeedIndicator = {Enabled = true},
-    AutoFarm = {Enabled = false}
+    AutoFarm = {Enabled = false},
+    Tracer = {Enabled = false}
 }
 
 local MenuOpen = false
@@ -296,6 +296,8 @@ local function CreateToggle(parent, label, path)
                 if Config.Collisions.Enabled then EnableCollisions() else DisableCollisions() end
             elseif path[1] == "AutoFarm" and path[2] == "Enabled" then
                 if Config.AutoFarm.Enabled then EnableAutoFarm() else DisableAutoFarm() end
+            elseif path[1] == "Tracer" and path[2] == "Enabled" then
+                -- Трейсер просто хранит настройку, используется в выстреле
             end
         end
     end)
@@ -565,6 +567,11 @@ CreateToggle(autoFarmPanel, "Enable", {"AutoFarm","Enabled"})
 autoFarmPanel.Size = UDim2.new(1, -10, 0, 60)
 autoFarmPanel.Position = UDim2.new(0, 5, 0, 420)
 
+local tracerPanel = CreateSettingPanel(MiscTab, "Tracer")
+CreateToggle(tracerPanel, "Enable", {"Tracer","Enabled"})
+tracerPanel.Size = UDim2.new(1, -10, 0, 60)
+tracerPanel.Position = UDim2.new(0, 5, 0, 490)
+
 local function SwitchTab(name)
     for _, tab in pairs(AllTabs) do
         tab.Visible = false
@@ -606,26 +613,34 @@ local function FindHead(char)
     return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart")
 end
 
-local function GetClosestTargetByDistance(range, ignoreWalls)
+-- Новая функция для поиска цели в FOV (более надежная)
+local function GetTargetInFOV(range, ignoreWalls)
     local closest = nil
     local bestDist = range
     local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myPos then return nil end
 
+    local camPos = Camera.CFrame.Position
+    local camLook = Camera.CFrame.LookVector
+
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local hrp = player.Character:FindFirstChild("HumanoidRootPart") or FindTorso(player.Character)
-            if hrp then
-                local dist = (myPos.Position - hrp.Position).Magnitude
-                if dist < bestDist then
-                    if not ignoreWalls then
-                        local ray = Ray.new(myPos.Position, (hrp.Position - myPos.Position).Unit * dist)
-                        local hit, hitPart = workspace:FindPartOnRay(ray, LocalPlayer.Character)
-                        if hit and not hitPart:IsDescendantOf(player.Character) then
-                            continue
-                        end
+            local head = FindHead(player.Character)
+            if head then
+                -- Проверка видимости
+                if not ignoreWalls then
+                    local ray = Ray.new(camPos, (head.Position - camPos).Unit * (camPos - head.Position).Magnitude)
+                    local hit, hitPart = workspace:FindPartOnRay(ray, LocalPlayer.Character)
+                    if hit and not hitPart:IsDescendantOf(player.Character) then
+                        continue
                     end
-                    bestDist = dist
+                end
+                -- Вычисляем угол между направлением камеры и направлением на цель
+                local dirToTarget = (head.Position - camPos).Unit
+                local dot = camLook:Dot(dirToTarget)
+                local angle = math.acos(math.clamp(dot, -1, 1)) * 57.2958
+                if angle < bestDist then
+                    bestDist = angle
                     closest = player
                 end
             end
@@ -634,57 +649,51 @@ local function GetClosestTargetByDistance(range, ignoreWalls)
     return closest
 end
 
-local function GetClosestTargetByScreen(range, ignoreWalls)
-    local closest = nil
-    local bestDist = range
-    local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not myPos then return nil end
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
-            local head = FindHead(player.Character)
-            if head then
-                if not ignoreWalls then
-                    local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * (myPos.Position - head.Position).Magnitude)
-                    local hit, hitPart = workspace:FindPartOnRay(ray, LocalPlayer.Character)
-                    if hit and not hitPart:IsDescendantOf(player.Character) then
-                        continue
-                    end
-                end
-                local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
-                if onScreen then
-                    local dist = (pos - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
-                    if dist < bestDist then
-                        bestDist = dist
-                        closest = player
-                    end
-                end
-            end
-        end
-    end
-    return closest
+-- Функция для создания трейсера
+local function CreateTracer(startPos, endPos)
+    if not Config.Tracer.Enabled then return end
+    local line = Drawing.new("Line")
+    line.Thickness = 2
+    line.Color = Color3.fromRGB(255, 255, 0)
+    line.Transparency = 0.8
+    line.From = Camera:WorldToViewportPoint(startPos)
+    line.To = Camera:WorldToViewportPoint(endPos)
+    line.Visible = true
+    task.delay(0.2, function() line:Remove() end)
 end
 
+-- Функция атаки (улучшенная)
 local function AttemptAttack()
     local ignoreWalls = Config.WallShot.Enabled
-    local target = GetClosestTargetByScreen(Config.FOV.Radius, ignoreWalls)
+    local target = GetTargetInFOV(Config.FOV.Radius, ignoreWalls)
     
     if target and target.Character then
         local aimPart = FindHead(target.Character)
         if aimPart then
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
+            -- Наводим камеру на цель
+            local camPos = Camera.CFrame.Position
+            Camera.CFrame = CFrame.new(camPos, aimPart.Position)
             
+            -- Активируем инструмент
             local char = LocalPlayer.Character
             if char then
+                local tool = nil
                 for _, child in ipairs(char:GetChildren()) do
-                    if child:IsA("Tool") then
-                        pcall(function() child:Activate() end)
-                    end
+                    if child:IsA("Tool") then tool = child break end
                 end
-                
-                for _, remote in ipairs(ReplicatedStorage:GetChildren()) do
-                    if remote:IsA("RemoteEvent") then
-                        pcall(function() remote:FireServer(aimPart.Position) end)
+                if tool then
+                    pcall(function() tool:Activate() end)
+                    -- Отправляем координаты головы в RemoteEvent
+                    for _, remote in ipairs(ReplicatedStorage:GetChildren()) do
+                        if remote:IsA("RemoteEvent") then
+                            pcall(function() remote:FireServer(aimPart.Position) end)
+                        end
+                    end
+                    -- Трейсер
+                    if Config.Tracer.Enabled then
+                        local handle = tool:FindFirstChild("Handle") or char:FindFirstChild("HumanoidRootPart")
+                        local startPos = handle and handle.Position or char.HumanoidRootPart.Position
+                        CreateTracer(startPos, aimPart.Position)
                     end
                 end
             end
@@ -692,6 +701,7 @@ local function AttemptAttack()
     end
 end
 
+-- Выстрел
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -701,6 +711,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
+-- Основной цикл
 RunService.RenderStepped:Connect(function()
     if Config.FOVCircle.Enabled and FOVCircle then
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
@@ -713,22 +724,25 @@ RunService.RenderStepped:Connect(function()
         FOVCircle.Visible = false
     end
 
+    -- AimBot
     if Config.AimBot.Enabled and not MenuOpen then
         local ignoreWalls = Config.WallShot.Enabled
-        local target = GetClosestTargetByScreen(Config.FOV.Radius, ignoreWalls)
+        local target = GetTargetInFOV(Config.FOV.Radius, ignoreWalls)
         if target and target.Character then
             local aimPart = FindHead(target.Character)
             if aimPart then
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
+                local camPos = Camera.CFrame.Position
+                Camera.CFrame = CFrame.new(camPos, aimPart.Position)
             end
         end
     end
 
+    -- Trigger
     if Config.Trigger.Enabled and not MenuOpen then
         triggerDelay = triggerDelay + 1
         if triggerDelay >= Config.Trigger.Delay then
             local ignoreWalls = Config.WallShot.Enabled
-            local target = GetClosestTargetByScreen(Config.FOV.Radius, ignoreWalls)
+            local target = GetTargetInFOV(Config.FOV.Radius, ignoreWalls)
             if target then
                 local hrp = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
                 if hrp then
@@ -742,6 +756,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- Spin
     if SpinActive then
         local char = LocalPlayer.Character
         if char then
@@ -753,6 +768,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- ESP (без изменений, но добавим удаление)
 local function RemoveESPForPlayer(player)
     local data = ESPCache[player]
     if data then
@@ -910,6 +926,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- Chams
 function EnableChams()
     ChamsActive = true
     for _, player in ipairs(Players:GetPlayers()) do
@@ -939,6 +956,7 @@ function DisableChams()
     ChamsObjects = {}
 end
 
+-- Fly
 function EnableFly()
     FlyActive = true
     local char = LocalPlayer.Character
@@ -967,6 +985,7 @@ function DisableFly()
     end
 end
 
+-- Speed
 function EnableSpeed()
     SpeedActive = true
     local char = LocalPlayer.Character
@@ -985,6 +1004,7 @@ function DisableSpeed()
     end
 end
 
+-- Spin
 function EnableSpin()
     SpinActive = true
 end
@@ -993,6 +1013,7 @@ function DisableSpin()
     SpinActive = false
 end
 
+-- Collisions
 function EnableCollisions()
     CollisionsActive = true
     local char = LocalPlayer.Character
@@ -1020,8 +1041,11 @@ function DisableCollisions()
     end
 end
 
+-- Auto Farm (переработанный)
 local AutoFarmCoins = {}
 local AutoFarmLines = {}
+local AutoFarmTarget = nil
+local AutoFarmSpeed = 25
 
 function IsCoin(obj)
     if obj:IsA("BasePart") and (obj.Name:lower():find("coin") or obj.Name:lower():find("money") or obj.Name:lower():find("pickup")) then
@@ -1032,6 +1056,7 @@ end
 
 function EnableAutoFarm()
     AutoFarmActive = true
+    -- Находим все монеты и создаём линии
     for _, obj in ipairs(workspace:GetDescendants()) do
         if IsCoin(obj) then
             if not AutoFarmCoins[obj] then
@@ -1045,11 +1070,34 @@ function EnableAutoFarm()
             end
         end
     end
-    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    -- Поднимаемся на уровень монет (первая найденная)
+    local firstCoin = nil
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if IsCoin(obj) then
+            firstCoin = obj
+            break
+        end
+    end
+    if firstCoin then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = CFrame.new(hrp.Position, firstCoin.Position)
+            -- Устанавливаем высоту на уровень монеты
+            local targetY = firstCoin.Position.Y
+            hrp.CFrame = CFrame.new(Vector3.new(hrp.Position.X, targetY, hrp.Position.Z))
+        end
+    end
+    local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
     if humanoid then
         humanoid.PlatformStand = true
         humanoid.WalkSpeed = 0
         humanoid.JumpPower = 0
+    end
+    -- Отключаем коллизии на всех объектах, чтобы можно было проходить сквозь стены
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.CanCollide = false
+        end
     end
 end
 
@@ -1066,8 +1114,15 @@ function DisableAutoFarm()
         humanoid.WalkSpeed = 16
         humanoid.JumpPower = 50
     end
+    -- Включаем коллизии обратно
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.CanCollide = true
+        end
+    end
 end
 
+-- Цикл Auto Farm: плавное движение к монете
 RunService.RenderStepped:Connect(function()
     if AutoFarmActive and LocalPlayer.Character then
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -1076,15 +1131,10 @@ RunService.RenderStepped:Connect(function()
             humanoid.PlatformStand = true
             humanoid.WalkSpeed = 0
             
-            for _, v in ipairs(workspace:GetDescendants()) do
-                if v:IsA("BasePart") and v.CanCollide then
-                    v.CanCollide = false
-                end
-            end
-
-            local myPos = hrp.Position
+            -- Находим ближайшую монету
             local closestCoin = nil
             local minDist = math.huge
+            local myPos = hrp.Position
 
             for _, obj in ipairs(workspace:GetDescendants()) do
                 if IsCoin(obj) then
@@ -1106,6 +1156,7 @@ RunService.RenderStepped:Connect(function()
                 end
             end
 
+            -- Обновляем линии
             for obj, line in pairs(AutoFarmCoins) do
                 if obj and obj.Parent then
                     local pos, onScreen = Camera:WorldToViewportPoint(obj.Position)
@@ -1122,15 +1173,32 @@ RunService.RenderStepped:Connect(function()
                 end
             end
 
+            -- Движение к ближайшей монете (плавное, на постоянной высоте, сквозь стены)
             if closestCoin then
-                local targetPos = closestCoin.Position + Vector3.new(0, 1, 0)
-                hrp.CFrame = CFrame.new(hrp.Position + (targetPos - hrp.Position).Unit * 100, targetPos)
+                local targetPos = closestCoin.Position
+                -- Сохраняем высоту текущего положения (можно и высоту монеты, но по условию - не менять высоту)
+                local currentY = hrp.Position.Y
+                local desiredPos = Vector3.new(targetPos.X, currentY, targetPos.Z)
+                local direction = (desiredPos - hrp.Position).Unit
+                local step = AutoFarmSpeed * 0.05 -- скорость за кадр (примерно 25 стадий/сек)
+                if (desiredPos - hrp.Position).Magnitude > step then
+                    hrp.CFrame = CFrame.new(hrp.Position + direction * step, desiredPos)
+                else
+                    -- Если близко, телепортируемся точно
+                    hrp.CFrame = CFrame.new(desiredPos)
+                end
                 hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                -- Если монета близко (расстояние < 3), то она подбирается, перейдём к следующей
+                if (hrp.Position - targetPos).Magnitude < 3 then
+                    -- Удаляем эту монету из таблицы (она исчезнет)
+                    AutoFarmCoins[closestCoin] = nil
+                end
             end
         end
     end
 end)
 
+-- Остальные функции (BunnyHop, FPS, Watermark и т.д.) остаются
 RunService.Heartbeat:Connect(function()
     local currentTick = tick()
     if currentTick - LastFrameTime > 0 then
@@ -1235,59 +1303,8 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-local isDraggingMenu = false
-local dragOffsetMenu = Vector2.new()
-
-local function StartDragging(input)
-    isDraggingMenu = true
-    dragOffsetMenu = Vector2.new(input.Position.X - MainFrame.AbsolutePosition.X, input.Position.Y - MainFrame.AbsolutePosition.Y)
-end
-
-TitleBar.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        StartDragging(input)
-    end
-end)
-
-TitleBar.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        isDraggingMenu = false
-    end
-end)
-
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        local objects = UserInputService:GetGuiObjectsAtPosition(input.Position.X, input.Position.Y)
-        local isClickable = false
-        for _, obj in ipairs(objects) do
-            if obj:IsA("TextButton") or obj:IsA("ImageButton") then
-                isClickable = true
-                break
-            end
-        end
-        if not isClickable then
-            StartDragging(input)
-        end
-    end
-end)
-
-MainFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        isDraggingMenu = false
-    end
-end)
-
-UserInputService.TouchMoved:Connect(function(input)
-    if isDraggingMenu then
-        MainFrame.Position = UDim2.new(0, input.Position.X - dragOffsetMenu.X, 0, input.Position.Y - dragOffsetMenu.Y)
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if isDraggingMenu and input.UserInputType == Enum.UserInputType.MouseMovement then
-        MainFrame.Position = UDim2.new(0, input.Position.X - dragOffsetMenu.X, 0, input.Position.Y - dragOffsetMenu.Y)
-    end
-end)
+-- Убираем перетаскивание меню: теперь оно статично, удаляем все обработчики перетаскивания
+-- (они просто не будут подключаться)
 
 local isDraggingCircle = false
 local dragStartCircle = Vector2.new()
