@@ -20,7 +20,7 @@ local Config = {
     Spin = {Enabled = false, Speed = 360},
     Collisions = {Enabled = false},
     Watermark = {Enabled = true},
-    FOV = {Radius = 35, Thickness = 2, Color = Color3.fromRGB(255,255,255)},
+    FOV = {Radius = 70, Thickness = 2, Color = Color3.fromRGB(255,255,255)},
     FOVCircle = {Enabled = true},
     SpeedIndicator = {Enabled = true},
     AutoFarm = {Enabled = false}
@@ -92,6 +92,10 @@ TitleBar.BorderSizePixel = 0
 TitleBar.Active = true
 TitleBar.Parent = MainFrame
 
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 12)
+titleCorner.Parent = TitleBar
+
 local TitleText = Instance.new("TextLabel")
 TitleText.Size = UDim2.new(1, -40, 1, 0)
 TitleText.Position = UDim2.new(0, 15, 0, 0)
@@ -127,7 +131,7 @@ Tabs.BorderSizePixel = 0
 Tabs.Parent = MainFrame
 
 local tabsCorner = Instance.new("UICorner")
-tabsCorner.CornerRadius = UDim.new(0, 10)
+tabsCorner.CornerRadius = UDim.new(0, 12)
 tabsCorner.Parent = Tabs
 
 local ContentArea = Instance.new("ScrollingFrame")
@@ -140,7 +144,7 @@ ContentArea.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
 ContentArea.Parent = MainFrame
 
 local contentCorner = Instance.new("UICorner")
-contentCorner.CornerRadius = UDim.new(0, 10)
+contentCorner.CornerRadius = UDim.new(0, 12)
 contentCorner.Parent = ContentArea
 
 local Sections = {"Combat", "Visuals", "Movement", "Misc"}
@@ -1041,6 +1045,12 @@ function EnableAutoFarm()
             end
         end
     end
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.PlatformStand = true
+        humanoid.WalkSpeed = 0
+        humanoid.JumpPower = 0
+    end
 end
 
 function DisableAutoFarm()
@@ -1050,12 +1060,28 @@ function DisableAutoFarm()
     end
     AutoFarmCoins = {}
     AutoFarmLines = {}
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.PlatformStand = false
+        humanoid.WalkSpeed = 16
+        humanoid.JumpPower = 50
+    end
 end
 
 RunService.RenderStepped:Connect(function()
     if AutoFarmActive and LocalPlayer.Character then
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then
+        local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+        if hrp and humanoid then
+            humanoid.PlatformStand = true
+            humanoid.WalkSpeed = 0
+            
+            for _, v in ipairs(workspace:GetDescendants()) do
+                if v:IsA("BasePart") and v.CanCollide then
+                    v.CanCollide = false
+                end
+            end
+
             local myPos = hrp.Position
             local closestCoin = nil
             local minDist = math.huge
@@ -1097,7 +1123,8 @@ RunService.RenderStepped:Connect(function()
             end
 
             if closestCoin then
-                hrp.CFrame = CFrame.new(closestCoin.Position + Vector3.new(0, 1, 0))
+                local targetPos = closestCoin.Position + Vector3.new(0, 1, 0)
+                hrp.CFrame = CFrame.new(hrp.Position + (targetPos - hrp.Position).Unit * 100, targetPos)
                 hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
             end
         end
@@ -1211,10 +1238,14 @@ end)
 local isDraggingMenu = false
 local dragOffsetMenu = Vector2.new()
 
+local function StartDragging(input)
+    isDraggingMenu = true
+    dragOffsetMenu = Vector2.new(input.Position.X - MainFrame.AbsolutePosition.X, input.Position.Y - MainFrame.AbsolutePosition.Y)
+end
+
 TitleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-        isDraggingMenu = true
-        dragOffsetMenu = Vector2.new(input.Position.X - MainFrame.AbsolutePosition.X, input.Position.Y - MainFrame.AbsolutePosition.Y)
+        StartDragging(input)
     end
 end)
 
@@ -1235,8 +1266,7 @@ MainFrame.InputBegan:Connect(function(input)
             end
         end
         if not isClickable then
-            isDraggingMenu = true
-            dragOffsetMenu = Vector2.new(input.Position.X - MainFrame.AbsolutePosition.X, input.Position.Y - MainFrame.AbsolutePosition.Y)
+            StartDragging(input)
         end
     end
 end)
