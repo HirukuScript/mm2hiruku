@@ -1,8 +1,3 @@
---[[
-  AlphaAssistant-0.1: HirukuScriptMM2.lua исправленный
-  Все изменения внесены согласно требованиям пользователя.
-]]
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -12,10 +7,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
--- ==================== КОНФИГУРАЦИЯ ====================
 local Config = {
     AimBot = {Enabled = false, Range = 100},
-    Silent = {Enabled = false, Range = 100},   -- Range теперь используется как дистанция, но FOV берётся из Config.FOV
+    Silent = {Enabled = false, Range = 100},
     Trigger = {Enabled = false, Range = 50, Delay = 50},
     WallShot = {Enabled = false},
     Chams = {Enabled = false, Transparency = 0.3, FillColor = Color3.fromRGB(255,255,255), OutlineColor = Color3.fromRGB(0,0,0)},
@@ -29,7 +23,7 @@ local Config = {
     FOV = {Radius = 35, Thickness = 2, Color = Color3.fromRGB(255,255,255)},
     FOVCircle = {Enabled = true},
     SpeedIndicator = {Enabled = true},
-    AutoFarm = {Enabled = false}  -- НОВОЕ
+    AutoFarm = {Enabled = false}
 }
 
 local MenuOpen = false
@@ -49,7 +43,6 @@ local BhopSpeed = 16
 local LastBhopTime = 0
 local triggerDelay = 0
 
--- ==================== GUI ====================
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HirukuInternal"
 ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
@@ -58,9 +51,8 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 99999
 ScreenGui.IgnoreGuiInset = true
 
--- Кнопка открытия меню (увеличена, добавлена обводка)
 local CircleButton = Instance.new("TextButton")
-CircleButton.Size = UDim2.new(0, 70, 0, 70)  -- увеличено с 50 до 70
+CircleButton.Size = UDim2.new(0, 70, 0, 70)
 CircleButton.Position = UDim2.new(0.02, 0, 0.5, -35)
 CircleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 CircleButton.Text = "H"
@@ -69,7 +61,7 @@ CircleButton.TextScaled = false
 CircleButton.TextSize = 36
 CircleButton.Font = Enum.Font.Code
 CircleButton.BorderSizePixel = 1
-CircleButton.BorderColor3 = Color3.fromRGB(255, 255, 255) -- белая обводка
+CircleButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
 CircleButton.AutoButtonColor = false
 CircleButton.ZIndex = 500
 CircleButton.Parent = ScreenGui
@@ -78,24 +70,21 @@ local circleCorner = Instance.new("UICorner")
 circleCorner.CornerRadius = UDim.new(0, 14)
 circleCorner.Parent = CircleButton
 
--- Главное меню
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 450, 0, 400)
 MainFrame.Position = UDim2.new(0.5, -225, 0.5, -200)
 MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
 MainFrame.BackgroundTransparency = 0
-MainFrame.BorderSizePixel = 1
-MainFrame.BorderColor3 = Color3.fromRGB(50, 50, 50)
+MainFrame.BorderSizePixel = 0
 MainFrame.Visible = false
 MainFrame.Active = true
 MainFrame.ZIndex = 400
 MainFrame.Parent = ScreenGui
 
 local mainCorner = Instance.new("UICorner")
-mainCorner.CornerRadius = UDim.new(0, 20) -- более сильное закругление
+mainCorner.CornerRadius = UDim.new(0, 12)
 mainCorner.Parent = MainFrame
 
--- Заголовок
 local TitleBar = Instance.new("Frame")
 TitleBar.Size = UDim2.new(1, 0, 0, 35)
 TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
@@ -130,13 +119,16 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 5)
 closeCorner.Parent = CloseBtn
 
--- Вкладки
 local Tabs = Instance.new("Frame")
 Tabs.Size = UDim2.new(0, 100, 1, -35)
 Tabs.Position = UDim2.new(0, 0, 0, 35)
 Tabs.BackgroundColor3 = Color3.fromRGB(5, 5, 5)
 Tabs.BorderSizePixel = 0
 Tabs.Parent = MainFrame
+
+local tabsCorner = Instance.new("UICorner")
+tabsCorner.CornerRadius = UDim.new(0, 10)
+tabsCorner.Parent = Tabs
 
 local ContentArea = Instance.new("ScrollingFrame")
 ContentArea.Size = UDim2.new(1, -110, 1, -35)
@@ -146,6 +138,10 @@ ContentArea.BorderSizePixel = 0
 ContentArea.ScrollBarThickness = 3
 ContentArea.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
 ContentArea.Parent = MainFrame
+
+local contentCorner = Instance.new("UICorner")
+contentCorner.CornerRadius = UDim.new(0, 10)
+contentCorner.Parent = ContentArea
 
 local Sections = {"Combat", "Visuals", "Movement", "Misc"}
 local TabsLayout = Instance.new("UIListLayout")
@@ -166,8 +162,7 @@ for i, name in ipairs(Sections) do
     btn.TextScaled = false
     btn.Font = Enum.Font.Code
     btn.TextSize = 12
-    btn.BorderSizePixel = 1
-    btn.BorderColor3 = Color3.fromRGB(30, 30, 30)
+    btn.BorderSizePixel = 0
     btn.Parent = Tabs
     TabButtons[name] = btn
 
@@ -188,13 +183,11 @@ for i, name in ipairs(Sections) do
     contentLayout.Parent = content
 end
 
--- Вспомогательные функции для создания UI
 local function CreateSettingPanel(parent, title)
     local panel = Instance.new("Frame")
     panel.Size = UDim2.new(1, -10, 0, 30)
     panel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    panel.BorderSizePixel = 1
-    panel.BorderColor3 = Color3.fromRGB(30, 30, 30)
+    panel.BorderSizePixel = 0
     panel.Parent = parent
 
     local panelCorner = Instance.new("UICorner")
@@ -247,8 +240,7 @@ local function CreateToggle(parent, label, path)
     toggle.Size = UDim2.new(0, 30, 0, 16)
     toggle.Position = UDim2.new(0.8, 0, 0.2, 0)
     toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    toggle.BorderSizePixel = 1
-    toggle.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    toggle.BorderSizePixel = 0
     toggle.Parent = holder
 
     local toggleCorner = Instance.new("UICorner")
@@ -298,7 +290,7 @@ local function CreateToggle(parent, label, path)
                 if Config.Spin.Enabled then EnableSpin() else DisableSpin() end
             elseif path[1] == "Collisions" and path[2] == "Enabled" then
                 if Config.Collisions.Enabled then EnableCollisions() else DisableCollisions() end
-            elseif path[1] == "AutoFarm" and path[2] == "Enabled" then  -- НОВОЕ
+            elseif path[1] == "AutoFarm" and path[2] == "Enabled" then
                 if Config.AutoFarm.Enabled then EnableAutoFarm() else DisableAutoFarm() end
             end
         end
@@ -338,8 +330,7 @@ local function CreateSlider(parent, label, path, min, max, decimal)
     slider.Size = UDim2.new(0.9, 0, 0.2, 0)
     slider.Position = UDim2.new(0, 0, 0.5, 0)
     slider.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    slider.BorderSizePixel = 1
-    slider.BorderColor3 = Color3.fromRGB(100, 100, 100)
+    slider.BorderSizePixel = 0
     slider.Parent = holder
 
     local sliderCorner = Instance.new("UICorner")
@@ -431,7 +422,7 @@ local function CreateColorButton(parent, label, path, colorList)
     for idx, color in ipairs(colorList) do
         local btn = Instance.new("Frame")
         btn.Size = UDim2.new(0, 18, 0, 18)
-        btn.Position = UDim2.new(0, (idx-1)*20, 0, 0) -- исправлено позиционирование
+        btn.Position = UDim2.new(0, (idx-1)*20, 0, 0)
         btn.BackgroundColor3 = color
         btn.BorderSizePixel = 1
         btn.BorderColor3 = Color3.fromRGB(60, 60, 60)
@@ -476,7 +467,6 @@ local function CreateColorButton(parent, label, path, colorList)
     end
 end
 
--- ==================== Построение меню ====================
 local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
 CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"})
@@ -566,13 +556,11 @@ CreateToggle(speedIndPanel, "Enable", {"SpeedIndicator","Enabled"})
 speedIndPanel.Size = UDim2.new(1, -10, 0, 60)
 speedIndPanel.Position = UDim2.new(0, 5, 0, 350)
 
--- НОВОЕ: Auto Farm
 local autoFarmPanel = CreateSettingPanel(MiscTab, "Auto Farm")
 CreateToggle(autoFarmPanel, "Enable", {"AutoFarm","Enabled"})
 autoFarmPanel.Size = UDim2.new(1, -10, 0, 60)
 autoFarmPanel.Position = UDim2.new(0, 5, 0, 420)
 
--- Переключение вкладок
 local function SwitchTab(name)
     for _, tab in pairs(AllTabs) do
         tab.Visible = false
@@ -593,7 +581,6 @@ for name, btn in pairs(TabButtons) do
 end
 SwitchTab("Combat")
 
--- ==================== FOV Circle ====================
 function CreateFOVCircle()
     if FOVCircle then FOVCircle:Remove() end
     FOVCircle = Drawing.new("Circle")
@@ -607,7 +594,6 @@ end
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
 
--- ==================== Вспомогательные функции ====================
 local function FindTorso(char)
     return char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("LowerTorso") or char:FindFirstChild("HumanoidRootPart")
 end
@@ -616,7 +602,6 @@ local function FindHead(char)
     return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart")
 end
 
--- Поиск цели по расстоянию (для WallShot и Silent если FOV не используется)
 local function GetClosestTargetByDistance(range, ignoreWalls)
     local closest = nil
     local bestDist = range
@@ -629,14 +614,11 @@ local function GetClosestTargetByDistance(range, ignoreWalls)
             if hrp then
                 local dist = (myPos.Position - hrp.Position).Magnitude
                 if dist < bestDist then
-                    -- Проверка видимости, если WallShot выключен
                     if not ignoreWalls then
                         local ray = Ray.new(myPos.Position, (hrp.Position - myPos.Position).Unit * dist)
                         local hit, hitPart = workspace:FindPartOnRay(ray, LocalPlayer.Character)
-                        if hit and hitPart:IsDescendantOf(player.Character) then
-                            -- Луч попал в цель или её часть, значит видима
-                        else
-                            continue -- не видима, пропускаем
+                        if hit and not hitPart:IsDescendantOf(player.Character) then
+                            continue
                         end
                     end
                     bestDist = dist
@@ -648,7 +630,6 @@ local function GetClosestTargetByDistance(range, ignoreWalls)
     return closest
 end
 
--- Поиск цели по FOV (экранному расстоянию)
 local function GetClosestTargetByScreen(range, ignoreWalls)
     local closest = nil
     local bestDist = range
@@ -659,16 +640,15 @@ local function GetClosestTargetByScreen(range, ignoreWalls)
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local head = FindHead(player.Character)
             if head then
+                if not ignoreWalls then
+                    local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * (myPos.Position - head.Position).Magnitude)
+                    local hit, hitPart = workspace:FindPartOnRay(ray, LocalPlayer.Character)
+                    if hit and not hitPart:IsDescendantOf(player.Character) then
+                        continue
+                    end
+                end
                 local pos, onScreen = Camera:WorldToViewportPoint(head.Position)
                 if onScreen then
-                    -- Проверка видимости (если WallShot выключен)
-                    if not ignoreWalls then
-                        local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * (myPos.Position - head.Position).Magnitude)
-                        local hit, hitPart = workspace:FindPartOnRay(ray, LocalPlayer.Character)
-                        if hit and not hitPart:IsDescendantOf(player.Character) then
-                            continue -- стена блокирует
-                        end
-                    end
                     local dist = (pos - Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)).Magnitude
                     if dist < bestDist then
                         bestDist = dist
@@ -681,35 +661,26 @@ local function GetClosestTargetByScreen(range, ignoreWalls)
     return closest
 end
 
--- ==================== Обработка выстрела (Silent Aim) ====================
 local function AttemptAttack()
     local ignoreWalls = Config.WallShot.Enabled
-    -- Silent Aim теперь ищет цель в FOV (по экрану) с учётом диапазона
     local target = GetClosestTargetByScreen(Config.FOV.Radius, ignoreWalls)
-    -- Также проверяем дистанцию, если цель слишком далеко – не берём
+    
     if target and target.Character then
-        local hrp = target.Character:FindFirstChild("HumanoidRootPart") or FindTorso(target.Character)
-        if hrp then
-            local dist = (LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-            if dist <= Config.Silent.Range then
-                -- Наводим камеру на цель (для гарантии попадания)
-                local aimPart = FindHead(target.Character)
-                if aimPart then
-                    Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
-                end
-                -- Активируем инструмент (оружие)
-                local char = LocalPlayer.Character
-                if char then
-                    for _, child in ipairs(char:GetChildren()) do
-                        if child:IsA("Tool") then
-                            pcall(function() child:Activate() end)
-                        end
+        local aimPart = FindHead(target.Character)
+        if aimPart then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, aimPart.Position)
+            
+            local char = LocalPlayer.Character
+            if char then
+                for _, child in ipairs(char:GetChildren()) do
+                    if child:IsA("Tool") then
+                        pcall(function() child:Activate() end)
                     end
-                    -- Отправляем координаты в RemoteEvent (пуля летит в цель)
-                    for _, remote in ipairs(ReplicatedStorage:GetChildren()) do
-                        if remote:IsA("RemoteEvent") then
-                            pcall(function() remote:FireServer(aimPart.Position) end)
-                        end
+                end
+                
+                for _, remote in ipairs(ReplicatedStorage:GetChildren()) do
+                    if remote:IsA("RemoteEvent") then
+                        pcall(function() remote:FireServer(aimPart.Position) end)
                     end
                 end
             end
@@ -717,7 +688,6 @@ local function AttemptAttack()
     end
 end
 
--- ==================== Ввод (выстрел) ====================
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -727,9 +697,7 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- ==================== Основной цикл ====================
 RunService.RenderStepped:Connect(function()
-    -- FOV Circle
     if Config.FOVCircle.Enabled and FOVCircle then
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         FOVCircle.Position = center
@@ -741,7 +709,6 @@ RunService.RenderStepped:Connect(function()
         FOVCircle.Visible = false
     end
 
-    -- AimBot: наводит камеру на игрока в радиусе FOV
     if Config.AimBot.Enabled and not MenuOpen then
         local ignoreWalls = Config.WallShot.Enabled
         local target = GetClosestTargetByScreen(Config.FOV.Radius, ignoreWalls)
@@ -753,7 +720,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Trigger: стреляет автоматически, если игрок в FOV и в дистанции
     if Config.Trigger.Enabled and not MenuOpen then
         triggerDelay = triggerDelay + 1
         if triggerDelay >= Config.Trigger.Delay then
@@ -772,7 +738,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Spin
     if SpinActive then
         local char = LocalPlayer.Character
         if char then
@@ -784,7 +749,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ==================== ESP (исправление удаления) ====================
 local function RemoveESPForPlayer(player)
     local data = ESPCache[player]
     if data then
@@ -798,7 +762,7 @@ end
 local function CreateESPForPlayer(player)
     if not ESPActive then return end
     if not player.Character then return end
-
+    
     local data = {}
     local box = Drawing.new("Square")
     box.Visible = false
@@ -836,7 +800,6 @@ local function CreateESPForPlayer(player)
 
     ESPCache[player] = data
 
-    -- Очистка при смерти или удалении персонажа
     local function onCharacterRemoved()
         RemoveESPForPlayer(player)
     end
@@ -845,13 +808,11 @@ local function CreateESPForPlayer(player)
     char.AncestryChanged:Connect(function(_, parent)
         if not parent then onCharacterRemoved() end
     end)
-
+    
     local humanoid = char:FindFirstChildOfClass("Humanoid")
     if humanoid then
         humanoid.Died:Connect(onCharacterRemoved)
     end
-
-    -- Дополнительно: удаление при выходе игрока (PlayerRemoving уже обрабатывается)
 end
 
 function EnableESP()
@@ -877,7 +838,6 @@ Players.PlayerRemoving:Connect(function(player)
     RemoveESPForPlayer(player)
 end)
 
--- Обновление ESP каждый кадр
 RunService.RenderStepped:Connect(function()
     if ESPActive then
         for _, player in ipairs(Players:GetPlayers()) do
@@ -946,7 +906,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ==================== Chams ====================
 function EnableChams()
     ChamsActive = true
     for _, player in ipairs(Players:GetPlayers()) do
@@ -976,7 +935,6 @@ function DisableChams()
     ChamsObjects = {}
 end
 
--- ==================== Fly ====================
 function EnableFly()
     FlyActive = true
     local char = LocalPlayer.Character
@@ -1005,7 +963,6 @@ function DisableFly()
     end
 end
 
--- ==================== Speed ====================
 function EnableSpeed()
     SpeedActive = true
     local char = LocalPlayer.Character
@@ -1024,7 +981,6 @@ function DisableSpeed()
     end
 end
 
--- ==================== Spin ====================
 function EnableSpin()
     SpinActive = true
 end
@@ -1033,7 +989,6 @@ function DisableSpin()
     SpinActive = false
 end
 
--- ==================== Collisions ====================
 function EnableCollisions()
     CollisionsActive = true
     local char = LocalPlayer.Character
@@ -1061,9 +1016,7 @@ function DisableCollisions()
     end
 end
 
--- ==================== Auto Farm (новое) ====================
-local AutoFarmCoins = {} -- таблица монет и их линий
-local AutoFarmTarget = nil
+local AutoFarmCoins = {}
 local AutoFarmLines = {}
 
 function IsCoin(obj)
@@ -1075,7 +1028,6 @@ end
 
 function EnableAutoFarm()
     AutoFarmActive = true
-    -- Создаём линии для каждой монеты (трейсеры)
     for _, obj in ipairs(workspace:GetDescendants()) do
         if IsCoin(obj) then
             if not AutoFarmCoins[obj] then
@@ -1100,58 +1052,58 @@ function DisableAutoFarm()
     AutoFarmLines = {}
 end
 
--- Обновление автофарма каждый кадр
 RunService.RenderStepped:Connect(function()
     if AutoFarmActive and LocalPlayer.Character then
-        local myPos = LocalPlayer.Character.HumanoidRootPart.Position
-        -- Ищем ближайшую монету
-        local closestCoin = nil
-        local minDist = math.huge
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if IsCoin(obj) then
-                -- Если монеты ещё нет в таблице, создаём линию
-                if not AutoFarmCoins[obj] then
-                    local line = Drawing.new("Line")
-                    line.Thickness = 1
-                    line.Color = Color3.fromRGB(255, 255, 0)
-                    line.Transparency = 0.5
-                    line.Visible = true
-                    AutoFarmCoins[obj] = line
-                    table.insert(AutoFarmLines, line)
-                end
-                local dist = (myPos - obj.Position).Magnitude
-                if dist < minDist then
-                    minDist = dist
-                    closestCoin = obj
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local myPos = hrp.Position
+            local closestCoin = nil
+            local minDist = math.huge
+
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                if IsCoin(obj) then
+                    if not AutoFarmCoins[obj] then
+                        local line = Drawing.new("Line")
+                        line.Thickness = 1
+                        line.Color = Color3.fromRGB(255, 255, 0)
+                        line.Transparency = 0.5
+                        line.Visible = true
+                        AutoFarmCoins[obj] = line
+                        table.insert(AutoFarmLines, line)
+                    end
+                    
+                    local dist = (myPos - obj.Position).Magnitude
+                    if dist < minDist then
+                        minDist = dist
+                        closestCoin = obj
+                    end
                 end
             end
-        end
 
-        -- Обновляем линии
-        for obj, line in pairs(AutoFarmCoins) do
-            if obj and obj.Parent then
-                local pos, onScreen = Camera:WorldToViewportPoint(obj.Position)
-                if onScreen then
-                    line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                    line.To = Vector2.new(pos.X, pos.Y)
-                    line.Visible = true
+            for obj, line in pairs(AutoFarmCoins) do
+                if obj and obj.Parent then
+                    local pos, onScreen = Camera:WorldToViewportPoint(obj.Position)
+                    if onScreen then
+                        line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                        line.To = Vector2.new(pos.X, pos.Y)
+                        line.Visible = true
+                    else
+                        line.Visible = false
+                    end
                 else
-                    line.Visible = false
+                    line:Remove()
+                    AutoFarmCoins[obj] = nil
                 end
-            else
-                line:Remove()
-                AutoFarmCoins[obj] = nil
             end
-        end
 
-        -- Телепортация к ближайшей монете
-        if closestCoin and minDist > 3 then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(closestCoin.Position + Vector3.new(0, 2, 0))
+            if closestCoin then
+                hrp.CFrame = CFrame.new(closestCoin.Position + Vector3.new(0, 1, 0))
+                hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
+            end
         end
     end
 end)
 
--- ==================== Heartbeat (BunnyHop, FPS, etc.) ====================
 RunService.Heartbeat:Connect(function()
     local currentTick = tick()
     if currentTick - LastFrameTime > 0 then
@@ -1159,7 +1111,6 @@ RunService.Heartbeat:Connect(function()
         LastFrameTime = currentTick
     end
 
-    -- Bunny Hop
     if Config.BunnyHop.Enabled then
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
             local char = LocalPlayer.Character
@@ -1209,7 +1160,6 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ==================== Watermark and Speed Indicator ====================
 local Watermark = Instance.new("TextLabel")
 Watermark.Size = UDim2.new(0, 200, 0, 20)
 Watermark.Position = UDim2.new(0.5, -100, 0, 5)
@@ -1258,7 +1208,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- ==================== Drag & Drop Menu ====================
 local isDraggingMenu = false
 local dragOffsetMenu = Vector2.new()
 
@@ -1310,7 +1259,6 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- ==================== Кнопка открытия меню ====================
 local isDraggingCircle = false
 local dragStartCircle = Vector2.new()
 local dragOffsetCircle = Vector2.new()
@@ -1379,7 +1327,6 @@ CloseBtn.TouchTap:Connect(function()
     if FOVCircle then FOVCircle.Visible = false end
 end)
 
--- ==================== Обработка респавна игроков ====================
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         player.CharacterAdded:Connect(function()
@@ -1408,7 +1355,5 @@ LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 
--- Инициализация FOV круга
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
-
-print("Hiruku MM2 Script Loaded! (исправлено)")
+print("Hiruku MM2 Script Loaded!")
