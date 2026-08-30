@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
@@ -22,8 +23,12 @@ local Config = {
     FOV = {Radius = 70, Thickness = 2, Color = Color3.fromRGB(255,255,255)},
     FOVCircle = {Enabled = true},
     SpeedIndicator = {Enabled = true},
-    AutoFarm = {Enabled = false},
-    Tracer = {Enabled = false}
+    AutoFarm = {Enabled = false, Speed = 35},
+    Tracer = {Enabled = false},
+    AutoWin = {Enabled = false},
+    WhoIs = {Enabled = false},
+    SkyColor = {Enabled = false, Color = Color3.fromRGB(135,206,235)},
+    ChanceModifier = {Enabled = false, Value = 50}
 }
 
 local MenuOpen = false
@@ -34,6 +39,8 @@ local SpeedActive = false
 local SpinActive = false
 local CollisionsActive = false
 local AutoFarmActive = false
+local AutoWinActive = false
+local WhoIsActive = false
 local CurrentFPS = 0
 local LastFrameTime = tick()
 local FOVCircle = nil
@@ -42,6 +49,11 @@ local ChamsObjects = {}
 local BhopSpeed = 16
 local LastBhopTime = 0
 local triggerDelay = 0
+local TracerLines = {}
+local SkyChanged = false
+local AutoFarmTarget = nil
+local AutoFarmCoins = {}
+local AutoFarmLines = {}
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HirukuInternal"
@@ -58,7 +70,7 @@ CircleButton.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 CircleButton.Text = "H"
 CircleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 CircleButton.TextScaled = false
-CircleButton.TextSize = 36
+CircleButton.TextSize = 50
 CircleButton.Font = Enum.Font.Code
 CircleButton.BorderSizePixel = 1
 CircleButton.BorderColor3 = Color3.fromRGB(255, 255, 255)
@@ -297,7 +309,15 @@ local function CreateToggle(parent, label, path)
             elseif path[1] == "AutoFarm" and path[2] == "Enabled" then
                 if Config.AutoFarm.Enabled then EnableAutoFarm() else DisableAutoFarm() end
             elseif path[1] == "Tracer" and path[2] == "Enabled" then
-                -- Трейсер просто хранит настройку, используется в выстреле
+                -- just store setting
+            elseif path[1] == "AutoWin" and path[2] == "Enabled" then
+                if Config.AutoWin.Enabled then EnableAutoWin() else DisableAutoWin() end
+            elseif path[1] == "WhoIs" and path[2] == "Enabled" then
+                if Config.WhoIs.Enabled then EnableWhoIs() else DisableWhoIs() end
+            elseif path[1] == "SkyColor" and path[2] == "Enabled" then
+                if Config.SkyColor.Enabled then ApplySkyColor() else ResetSkyColor() end
+            elseif path[1] == "ChanceModifier" and path[2] == "Enabled" then
+                if Config.ChanceModifier.Enabled then ApplyChanceModifier() else ResetChanceModifier() end
             end
         end
     end)
@@ -378,6 +398,8 @@ local function CreateSlider(parent, label, path, min, max, decimal)
             for i = 1, #path - 1 do current = current[path[i]] end
             current[path[#path]] = value
             UpdateSlider()
+            if path[1] == "Chams" and path[2] == "Transparency" then UpdateChamsTransparency() end
+            if path[1] == "ChanceModifier" and path[2] == "Value" then ApplyChanceModifier() end
         end
     end)
     slider.InputChanged:Connect(function(input)
@@ -390,6 +412,8 @@ local function CreateSlider(parent, label, path, min, max, decimal)
             for i = 1, #path - 1 do current = current[path[i]] end
             current[path[#path]] = value
             UpdateSlider()
+            if path[1] == "Chams" and path[2] == "Transparency" then UpdateChamsTransparency() end
+            if path[1] == "ChanceModifier" and path[2] == "Value" then ApplyChanceModifier() end
         end
     end)
     slider.InputEnded:Connect(function(input)
@@ -456,9 +480,9 @@ local function CreateColorButton(parent, label, path, colorList)
                     end
                 end
 
-                if path[1] == "Chams" and path[2] == "FillColor" then EnableChams() end
-                if path[1] == "Chams" and path[2] == "OutlineColor" then EnableChams() end
+                if path[1] == "Chams" and (path[2] == "FillColor" or path[2] == "OutlineColor") then UpdateChamsColors() end
                 if path[1] == "FOV" and path[2] == "Color" then CreateFOVCircle() end
+                if path[1] == "SkyColor" and path[2] == "Color" then ApplySkyColor() end
             end
         end)
     end
@@ -473,6 +497,7 @@ local function CreateColorButton(parent, label, path, colorList)
     end
 end
 
+-- UI Build
 local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
 CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"})
@@ -564,13 +589,36 @@ speedIndPanel.Position = UDim2.new(0, 5, 0, 350)
 
 local autoFarmPanel = CreateSettingPanel(MiscTab, "Auto Farm")
 CreateToggle(autoFarmPanel, "Enable", {"AutoFarm","Enabled"})
-autoFarmPanel.Size = UDim2.new(1, -10, 0, 60)
+CreateSlider(autoFarmPanel, "Speed", {"AutoFarm","Speed"}, 20, 60, false)
+autoFarmPanel.Size = UDim2.new(1, -10, 0, 100)
 autoFarmPanel.Position = UDim2.new(0, 5, 0, 420)
 
 local tracerPanel = CreateSettingPanel(MiscTab, "Tracer")
 CreateToggle(tracerPanel, "Enable", {"Tracer","Enabled"})
 tracerPanel.Size = UDim2.new(1, -10, 0, 60)
-tracerPanel.Position = UDim2.new(0, 5, 0, 490)
+tracerPanel.Position = UDim2.new(0, 5, 0, 530)
+
+local autoWinPanel = CreateSettingPanel(MiscTab, "Auto Win")
+CreateToggle(autoWinPanel, "Enable", {"AutoWin","Enabled"})
+autoWinPanel.Size = UDim2.new(1, -10, 0, 60)
+autoWinPanel.Position = UDim2.new(0, 5, 0, 600)
+
+local whoIsPanel = CreateSettingPanel(MiscTab, "Who Is")
+CreateToggle(whoIsPanel, "Enable", {"WhoIs","Enabled"})
+whoIsPanel.Size = UDim2.new(1, -10, 0, 60)
+whoIsPanel.Position = UDim2.new(0, 5, 0, 670)
+
+local skyPanel = CreateSettingPanel(MiscTab, "Sky Color")
+CreateToggle(skyPanel, "Enable", {"SkyColor","Enabled"})
+CreateColorButton(skyPanel, "Color", {"SkyColor","Color"}, {Color3.fromRGB(135,206,235), Color3.fromRGB(0,0,0), Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0)})
+skyPanel.Size = UDim2.new(1, -10, 0, 100)
+skyPanel.Position = UDim2.new(0, 5, 0, 740)
+
+local chancePanel = CreateSettingPanel(MiscTab, "Chance Modifier")
+CreateToggle(chancePanel, "Enable", {"ChanceModifier","Enabled"})
+CreateSlider(chancePanel, "Value", {"ChanceModifier","Value"}, 1, 100, false)
+chancePanel.Size = UDim2.new(1, -10, 0, 130)
+chancePanel.Position = UDim2.new(0, 5, 0, 850)
 
 local function SwitchTab(name)
     for _, tab in pairs(AllTabs) do
@@ -613,7 +661,6 @@ local function FindHead(char)
     return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart")
 end
 
--- Новая функция для поиска цели в FOV (более надежная)
 local function GetTargetInFOV(range, ignoreWalls)
     local closest = nil
     local bestDist = range
@@ -627,7 +674,6 @@ local function GetTargetInFOV(range, ignoreWalls)
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
             local head = FindHead(player.Character)
             if head then
-                -- Проверка видимости
                 if not ignoreWalls then
                     local ray = Ray.new(camPos, (head.Position - camPos).Unit * (camPos - head.Position).Magnitude)
                     local hit, hitPart = workspace:FindPartOnRay(ray, LocalPlayer.Character)
@@ -635,7 +681,6 @@ local function GetTargetInFOV(range, ignoreWalls)
                         continue
                     end
                 end
-                -- Вычисляем угол между направлением камеры и направлением на цель
                 local dirToTarget = (head.Position - camPos).Unit
                 local dot = camLook:Dot(dirToTarget)
                 local angle = math.acos(math.clamp(dot, -1, 1)) * 57.2958
@@ -649,7 +694,6 @@ local function GetTargetInFOV(range, ignoreWalls)
     return closest
 end
 
--- Функция для создания трейсера
 local function CreateTracer(startPos, endPos)
     if not Config.Tracer.Enabled then return end
     local line = Drawing.new("Line")
@@ -659,10 +703,13 @@ local function CreateTracer(startPos, endPos)
     line.From = Camera:WorldToViewportPoint(startPos)
     line.To = Camera:WorldToViewportPoint(endPos)
     line.Visible = true
-    task.delay(0.2, function() line:Remove() end)
+    table.insert(TracerLines, line)
+    task.delay(0.2, function()
+        line:Remove()
+        table.remove(TracerLines, table.find(TracerLines, line))
+    end)
 end
 
--- Функция атаки (улучшенная)
 local function AttemptAttack()
     local ignoreWalls = Config.WallShot.Enabled
     local target = GetTargetInFOV(Config.FOV.Radius, ignoreWalls)
@@ -670,11 +717,9 @@ local function AttemptAttack()
     if target and target.Character then
         local aimPart = FindHead(target.Character)
         if aimPart then
-            -- Наводим камеру на цель
             local camPos = Camera.CFrame.Position
             Camera.CFrame = CFrame.new(camPos, aimPart.Position)
             
-            -- Активируем инструмент
             local char = LocalPlayer.Character
             if char then
                 local tool = nil
@@ -683,13 +728,11 @@ local function AttemptAttack()
                 end
                 if tool then
                     pcall(function() tool:Activate() end)
-                    -- Отправляем координаты головы в RemoteEvent
                     for _, remote in ipairs(ReplicatedStorage:GetChildren()) do
                         if remote:IsA("RemoteEvent") then
                             pcall(function() remote:FireServer(aimPart.Position) end)
                         end
                     end
-                    -- Трейсер
                     if Config.Tracer.Enabled then
                         local handle = tool:FindFirstChild("Handle") or char:FindFirstChild("HumanoidRootPart")
                         local startPos = handle and handle.Position or char.HumanoidRootPart.Position
@@ -701,7 +744,6 @@ local function AttemptAttack()
     end
 end
 
--- Выстрел
 UserInputService.InputBegan:Connect(function(input, processed)
     if processed then return end
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -711,7 +753,6 @@ UserInputService.InputBegan:Connect(function(input, processed)
     end
 end)
 
--- Основной цикл
 RunService.RenderStepped:Connect(function()
     if Config.FOVCircle.Enabled and FOVCircle then
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
@@ -724,7 +765,6 @@ RunService.RenderStepped:Connect(function()
         FOVCircle.Visible = false
     end
 
-    -- AimBot
     if Config.AimBot.Enabled and not MenuOpen then
         local ignoreWalls = Config.WallShot.Enabled
         local target = GetTargetInFOV(Config.FOV.Radius, ignoreWalls)
@@ -732,12 +772,12 @@ RunService.RenderStepped:Connect(function()
             local aimPart = FindHead(target.Character)
             if aimPart then
                 local camPos = Camera.CFrame.Position
-                Camera.CFrame = CFrame.new(camPos, aimPart.Position)
+                local desired = CFrame.new(camPos, aimPart.Position)
+                Camera.CFrame = Camera.CFrame:Lerp(desired, 0.2)
             end
         end
     end
 
-    -- Trigger
     if Config.Trigger.Enabled and not MenuOpen then
         triggerDelay = triggerDelay + 1
         if triggerDelay >= Config.Trigger.Delay then
@@ -756,7 +796,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Spin
     if SpinActive then
         local char = LocalPlayer.Character
         if char then
@@ -768,7 +807,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ESP (без изменений, но добавим удаление)
+-- ESP
 local function RemoveESPForPlayer(player)
     local data = ESPCache[player]
     if data then
@@ -927,6 +966,25 @@ RunService.RenderStepped:Connect(function()
 end)
 
 -- Chams
+function UpdateChamsColors()
+    if not ChamsActive then return end
+    for _, obj in pairs(ChamsObjects) do
+        if obj:IsA("Highlight") then
+            obj.FillColor = Config.Chams.FillColor
+            obj.OutlineColor = Config.Chams.OutlineColor
+        end
+    end
+end
+
+function UpdateChamsTransparency()
+    if not ChamsActive then return end
+    for _, obj in pairs(ChamsObjects) do
+        if obj:IsA("Highlight") then
+            obj.FillTransparency = Config.Chams.Transparency
+        end
+    end
+end
+
 function EnableChams()
     ChamsActive = true
     for _, player in ipairs(Players:GetPlayers()) do
@@ -956,7 +1014,28 @@ function DisableChams()
     ChamsObjects = {}
 end
 
--- Fly
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        wait(0.5)
+        if ChamsActive then
+            for _, desc in ipairs(player.Character:GetDescendants()) do
+                if desc:IsA("BasePart") then
+                    local highlight = Instance.new("Highlight")
+                    highlight.Adornee = desc
+                    highlight.FillColor = Config.Chams.FillColor
+                    highlight.OutlineColor = Config.Chams.OutlineColor
+                    highlight.FillTransparency = Config.Chams.Transparency
+                    highlight.OutlineTransparency = 0.5
+                    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+                    highlight.Parent = desc
+                    table.insert(ChamsObjects, highlight)
+                end
+            end
+        end
+    end)
+end)
+
+-- Fly, Speed, Spin, Collisions
 function EnableFly()
     FlyActive = true
     local char = LocalPlayer.Character
@@ -985,7 +1064,6 @@ function DisableFly()
     end
 end
 
--- Speed
 function EnableSpeed()
     SpeedActive = true
     local char = LocalPlayer.Character
@@ -1004,7 +1082,6 @@ function DisableSpeed()
     end
 end
 
--- Spin
 function EnableSpin()
     SpinActive = true
 end
@@ -1013,7 +1090,6 @@ function DisableSpin()
     SpinActive = false
 end
 
--- Collisions
 function EnableCollisions()
     CollisionsActive = true
     local char = LocalPlayer.Character
@@ -1041,12 +1117,7 @@ function DisableCollisions()
     end
 end
 
--- Auto Farm (переработанный)
-local AutoFarmCoins = {}
-local AutoFarmLines = {}
-local AutoFarmTarget = nil
-local AutoFarmSpeed = 25
-
+-- Auto Farm (Исправленный)
 function IsCoin(obj)
     if obj:IsA("BasePart") and (obj.Name:lower():find("coin") or obj.Name:lower():find("money") or obj.Name:lower():find("pickup")) then
         return true
@@ -1054,9 +1125,38 @@ function IsCoin(obj)
     return false
 end
 
+function FindClosestCoin()
+    local closest = nil
+    local minDist = math.huge
+    local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and LocalPlayer.Character.HumanoidRootPart.Position
+    if not myPos then return nil end
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if IsCoin(obj) then
+            local dist = (myPos - obj.Position).Magnitude
+            if dist < minDist then
+                minDist = dist
+                closest = obj
+            end
+        end
+    end
+    return closest
+end
+
 function EnableAutoFarm()
     AutoFarmActive = true
-    -- Находим все монеты и создаём линии
+    -- Отключаем гравитацию и коллизии
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid.PlatformStand = true
+        humanoid.WalkSpeed = 0
+        humanoid.JumpPower = 0
+    end
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.CanCollide = false
+        end
+    end
+    -- Создаём трейсеры для монет
     for _, obj in ipairs(workspace:GetDescendants()) do
         if IsCoin(obj) then
             if not AutoFarmCoins[obj] then
@@ -1070,39 +1170,12 @@ function EnableAutoFarm()
             end
         end
     end
-    -- Поднимаемся на уровень монет (первая найденная)
-    local firstCoin = nil
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if IsCoin(obj) then
-            firstCoin = obj
-            break
-        end
-    end
-    if firstCoin then
-        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.CFrame = CFrame.new(hrp.Position, firstCoin.Position)
-            -- Устанавливаем высоту на уровень монеты
-            local targetY = firstCoin.Position.Y
-            hrp.CFrame = CFrame.new(Vector3.new(hrp.Position.X, targetY, hrp.Position.Z))
-        end
-    end
-    local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
-    if humanoid then
-        humanoid.PlatformStand = true
-        humanoid.WalkSpeed = 0
-        humanoid.JumpPower = 0
-    end
-    -- Отключаем коллизии на всех объектах, чтобы можно было проходить сквозь стены
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart") then
-            v.CanCollide = false
-        end
-    end
+    AutoFarmTarget = FindClosestCoin()
 end
 
 function DisableAutoFarm()
     AutoFarmActive = false
+    AutoFarmTarget = nil
     for _, line in pairs(AutoFarmCoins) do
         line:Remove()
     end
@@ -1114,7 +1187,6 @@ function DisableAutoFarm()
         humanoid.WalkSpeed = 16
         humanoid.JumpPower = 50
     end
-    -- Включаем коллизии обратно
     for _, v in ipairs(workspace:GetDescendants()) do
         if v:IsA("BasePart") then
             v.CanCollide = true
@@ -1122,41 +1194,17 @@ function DisableAutoFarm()
     end
 end
 
--- Цикл Auto Farm: плавное движение к монете
-RunService.RenderStepped:Connect(function()
+-- Цикл Auto Farm: плавный полёт к ближайшей монете со скоростью 35 стадов/сек
+RunService.RenderStepped:Connect(function(dt)
     if AutoFarmActive and LocalPlayer.Character then
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
         if hrp and humanoid then
             humanoid.PlatformStand = true
             humanoid.WalkSpeed = 0
-            
-            -- Находим ближайшую монету
-            local closestCoin = nil
-            local minDist = math.huge
-            local myPos = hrp.Position
+            hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
 
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                if IsCoin(obj) then
-                    if not AutoFarmCoins[obj] then
-                        local line = Drawing.new("Line")
-                        line.Thickness = 1
-                        line.Color = Color3.fromRGB(255, 255, 0)
-                        line.Transparency = 0.5
-                        line.Visible = true
-                        AutoFarmCoins[obj] = line
-                        table.insert(AutoFarmLines, line)
-                    end
-                    
-                    local dist = (myPos - obj.Position).Magnitude
-                    if dist < minDist then
-                        minDist = dist
-                        closestCoin = obj
-                    end
-                end
-            end
-
-            -- Обновляем линии
+            -- Обновляем трейсеры
             for obj, line in pairs(AutoFarmCoins) do
                 if obj and obj.Parent then
                     local pos, onScreen = Camera:WorldToViewportPoint(obj.Position)
@@ -1173,97 +1221,119 @@ RunService.RenderStepped:Connect(function()
                 end
             end
 
-            -- Движение к ближайшей монете (плавное, на постоянной высоте, сквозь стены)
-            if closestCoin then
-                local targetPos = closestCoin.Position
-                -- Сохраняем высоту текущего положения (можно и высоту монеты, но по условию - не менять высоту)
-                local currentY = hrp.Position.Y
-                local desiredPos = Vector3.new(targetPos.X, currentY, targetPos.Z)
-                local direction = (desiredPos - hrp.Position).Unit
-                local step = AutoFarmSpeed * 0.05 -- скорость за кадр (примерно 25 стадий/сек)
-                if (desiredPos - hrp.Position).Magnitude > step then
-                    hrp.CFrame = CFrame.new(hrp.Position + direction * step, desiredPos)
+            -- Если цель не существует, ищем новую
+            if not AutoFarmTarget or not AutoFarmTarget.Parent then
+                AutoFarmTarget = FindClosestCoin()
+            end
+
+            -- Движение к цели
+            if AutoFarmTarget then
+                local targetPos = AutoFarmTarget.Position
+                local distance = (hrp.Position - targetPos).Magnitude
+                local step = Config.AutoFarm.Speed * dt
+
+                if distance <= step then
+                    -- Достигли монеты – телепортируемся прямо в неё
+                    hrp.CFrame = CFrame.new(targetPos)
+                    AutoFarmTarget = nil
                 else
-                    -- Если близко, телепортируемся точно
-                    hrp.CFrame = CFrame.new(desiredPos)
+                    -- Иначе летим по направлению к цели
+                    local direction = (targetPos - hrp.Position).Unit
+                    local newPos = hrp.Position + direction * step
+                    hrp.CFrame = CFrame.new(newPos)
                 end
                 hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
-                -- Если монета близко (расстояние < 3), то она подбирается, перейдём к следующей
-                if (hrp.Position - targetPos).Magnitude < 3 then
-                    -- Удаляем эту монету из таблицы (она исчезнет)
-                    AutoFarmCoins[closestCoin] = nil
-                end
             end
         end
     end
 end)
 
--- Остальные функции (BunnyHop, FPS, Watermark и т.д.) остаются
-RunService.Heartbeat:Connect(function()
-    local currentTick = tick()
-    if currentTick - LastFrameTime > 0 then
-        CurrentFPS = math.floor(1 / (currentTick - LastFrameTime))
-        LastFrameTime = currentTick
-    end
-
-    if Config.BunnyHop.Enabled then
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-            local char = LocalPlayer.Character
-            if char then
-                local humanoid = char:FindFirstChild("Humanoid")
-                if humanoid then
-                    if humanoid.FloorMaterial ~= Enum.Material.Air then
-                        humanoid.Jump = true
-                        if tick() - LastBhopTime > 0.1 then
-                            BhopSpeed = math.min(BhopSpeed + 5, Config.BunnyHop.MaxSpeed)
-                            humanoid.WalkSpeed = BhopSpeed
-                            LastBhopTime = tick()
-                        end
-                    end
-                end
-            end
-        else
-            BhopSpeed = 16
+-- Auto Win
+function EnableAutoWin()
+    AutoWinActive = true
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
+            player.Character.Humanoid.Health = 0
         end
     end
-end)
+end
 
-RunService.RenderStepped:Connect(function()
-    if FlyActive and LocalPlayer.Character then
-        local char = LocalPlayer.Character
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local humanoid = char:FindFirstChild("Humanoid")
-        if hrp and humanoid then
-            local moveDir = humanoid.MoveDirection
-            local vel = moveDir * Config.Fly.Speed
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) or humanoid.Jump then
-                vel = vel + Vector3.new(0, 50, 0)
-                humanoid.Jump = false
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-                vel = vel - Vector3.new(0, 50, 0)
-            end
-            vel = vel + Vector3.new(0, Config.Fly.HeightOffset, 0)
-            hrp.AssemblyLinearVelocity = vel
-            humanoid.PlatformStand = true
+function DisableAutoWin()
+    AutoWinActive = false
+end
+
+-- WhoIs
+local RoleDisplay = Instance.new("TextLabel")
+RoleDisplay.Size = UDim2.new(0, 300, 0, 30)
+RoleDisplay.Position = UDim2.new(0.5, -150, 0, 60)
+RoleDisplay.BackgroundColor3 = Color3.fromRGB(0,0,0)
+RoleDisplay.BackgroundTransparency = 0.5
+RoleDisplay.TextColor3 = Color3.fromRGB(255,255,255)
+RoleDisplay.TextScaled = true
+RoleDisplay.Font = Enum.Font.Code
+RoleDisplay.ZIndex = 300
+RoleDisplay.Visible = false
+RoleDisplay.Parent = ScreenGui
+
+function EnableWhoIs()
+    WhoIsActive = true
+    RoleDisplay.Visible = true
+end
+
+function DisableWhoIs()
+    WhoIsActive = false
+    RoleDisplay.Visible = false
+end
+
+-- Sky Color
+local OriginalSky = nil
+function ApplySkyColor()
+    local sky = Lighting:FindFirstChild("Sky") or Instance.new("Sky")
+    if not sky.Parent then sky.Parent = Lighting end
+    OriginalSky = OriginalSky or sky:Clone()
+    sky.SkyColor = Config.SkyColor.Color
+    sky.StarColor = Config.SkyColor.Color
+    SkyChanged = true
+end
+
+function ResetSkyColor()
+    if OriginalSky then
+        local current = Lighting:FindFirstChild("Sky")
+        if current then current:Destroy() end
+        OriginalSky.Parent = Lighting
+        OriginalSky = nil
+        SkyChanged = false
+    end
+end
+
+-- Chance Modifier
+function ApplyChanceModifier()
+    local chanceEvents = {}
+    for _, v in ipairs(ReplicatedStorage:GetChildren()) do
+        if v:IsA("RemoteEvent") and (v.Name:lower():find("chance") or v.Name:lower():find("role")) then
+            table.insert(chanceEvents, v)
         end
     end
-
-    if SpeedActive and LocalPlayer.Character then
-        local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
-        if humanoid then humanoid.WalkSpeed = Config.Speed.Speed end
+    for _, remote in ipairs(chanceEvents) do
+        pcall(function()
+            remote:FireServer(Config.ChanceModifier.Value)
+        end)
     end
-end)
+end
 
+function ResetChanceModifier()
+    -- no op
+end
+
+-- Watermark and Speed Indicator
 local Watermark = Instance.new("TextLabel")
-Watermark.Size = UDim2.new(0, 200, 0, 20)
-Watermark.Position = UDim2.new(0.5, -100, 0, 5)
+Watermark.Size = UDim2.new(0, 250, 0, 20)
+Watermark.Position = UDim2.new(0.5, -125, 0, 5)
 Watermark.BackgroundColor3 = Color3.fromRGB(0,0,0)
 Watermark.BackgroundTransparency = 0.3
 Watermark.TextColor3 = Color3.fromRGB(255,255,255)
 Watermark.TextScaled = true
 Watermark.Font = Enum.Font.Code
-Watermark.Text = "Hiruku | FPS: 0"
 Watermark.ZIndex = 300
 Watermark.Parent = ScreenGui
 
@@ -1279,7 +1349,6 @@ SpeedLabel.BackgroundTransparency = 0.3
 SpeedLabel.TextColor3 = Color3.fromRGB(255,255,255)
 SpeedLabel.TextScaled = true
 SpeedLabel.Font = Enum.Font.Code
-SpeedLabel.Text = "Speed: 0"
 SpeedLabel.ZIndex = 300
 SpeedLabel.Parent = ScreenGui
 
@@ -1288,12 +1357,19 @@ speedCorner.CornerRadius = UDim.new(1,0)
 speedCorner.Parent = SpeedLabel
 
 RunService.Heartbeat:Connect(function()
+    local currentTick = tick()
+    if currentTick - LastFrameTime > 0 then
+        CurrentFPS = math.floor(1 / (currentTick - LastFrameTime))
+        LastFrameTime = currentTick
+    end
+
     if Config.Watermark.Enabled then
         Watermark.Visible = true
-        Watermark.Text = "Hiruku | FPS: " .. CurrentFPS .. " | Players: " .. #Players:GetPlayers()
+        Watermark.Text = "Hiruku | FPS: " .. CurrentFPS .. " | Players: " .. #Players:GetPlayers() .. " | @" .. LocalPlayer.Name
     else
         Watermark.Visible = false
     end
+
     if Config.SpeedIndicator.Enabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         SpeedLabel.Visible = true
         local speed = LocalPlayer.Character.HumanoidRootPart.AssemblyLinearVelocity.Magnitude
@@ -1301,10 +1377,27 @@ RunService.Heartbeat:Connect(function()
     else
         SpeedLabel.Visible = false
     end
+
+    if WhoIsActive then
+        local sheriff = nil
+        local murderer = nil
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer then
+                local role = player:GetAttribute("Role") or (player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Role"))
+                if role then
+                    if role.Value == "Sheriff" or role.Value == "Murderer" then
+                        if role.Value == "Sheriff" then sheriff = player.Name end
+                        if role.Value == "Murderer" then murderer = player.Name end
+                    end
+                end
+            end
+        end
+        RoleDisplay.Text = "Sheriff: " .. (sheriff or "none") .. "\nMurderer: " .. (murderer or "none")
+    end
 end)
 
--- Убираем перетаскивание меню: теперь оно статично, удаляем все обработчики перетаскивания
--- (они просто не будут подключаться)
+-- Убираем перетаскивание меню (статичное)
+-- Не подключаем обработчики перемещения
 
 local isDraggingCircle = false
 local dragStartCircle = Vector2.new()
@@ -1374,6 +1467,7 @@ CloseBtn.TouchTap:Connect(function()
     if FOVCircle then FOVCircle.Visible = false end
 end)
 
+-- Обработка респавна
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         player.CharacterAdded:Connect(function()
@@ -1400,6 +1494,7 @@ LocalPlayer.CharacterAdded:Connect(function()
         wait(0.5)
         EnableAutoFarm()
     end
+    if SkyChanged then ApplySkyColor() end
 end)
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
