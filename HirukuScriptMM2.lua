@@ -26,7 +26,8 @@ local Config = {
     AutoFarm = {Enabled = false, Speed = 35},
     Tracer = {Enabled = false},
     WhoIs = {Enabled = false},
-    SkyColor = {Enabled = false, Color = Color3.fromRGB(135,206,235)}
+    SkyColor = {Enabled = false, Color = Color3.fromRGB(135,206,235)},
+    ShowCircle = {Enabled = false}
 }
 
 local MenuOpen = false
@@ -50,6 +51,7 @@ local SkyChanged = false
 local AutoFarmTarget = nil
 local AutoFarmCoins = {}
 local AutoFarmLines = {}
+local LastState = nil
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "HirukuInternal"
@@ -150,11 +152,76 @@ ContentArea.BorderSizePixel = 0
 ContentArea.ScrollBarThickness = 3
 ContentArea.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
 ContentArea.Parent = MainFrame
-ContentArea.CanvasSize = UDim2.new(0, 0, 0, 900) -- Исправление скролла
+ContentArea.CanvasSize = UDim2.new(0, 0, 0, 900)
 
 local contentCorner = Instance.new("UICorner")
 contentCorner.CornerRadius = UDim.new(0, 12)
 contentCorner.Parent = ContentArea
+
+-- PREVIEW PANEL (Справа)
+local PreviewPanel = Instance.new("Frame")
+PreviewPanel.Size = UDim2.new(0, 200, 0, 150)
+PreviewPanel.Position = UDim2.new(1, 0, 0.5, -75)
+PreviewPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+PreviewPanel.BorderSizePixel = 0
+PreviewPanel.ZIndex = 500
+PreviewPanel.Parent = ScreenGui
+
+local previewCorner = Instance.new("UICorner")
+previewCorner.CornerRadius = UDim.new(0, 12)
+previewCorner.Parent = PreviewPanel
+
+local PreviewTitle = Instance.new("TextLabel")
+PreviewTitle.Size = UDim2.new(1, 0, 0, 30)
+PreviewTitle.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+PreviewTitle.Text = "Preview"
+PreviewTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+PreviewTitle.Font = Enum.Font.Code
+PreviewTitle.TextSize = 14
+PreviewTitle.Parent = PreviewPanel
+
+local previewTitleCorner = Instance.new("UICorner")
+previewTitleCorner.CornerRadius = UDim.new(0, 12)
+previewTitleCorner.Parent = PreviewTitle
+
+-- Превью ESP
+local EspPreviewBox = Instance.new("Frame")
+EspPreviewBox.Size = UDim2.new(0, 60, 0, 90)
+EspPreviewBox.Position = UDim2.new(0.5, -30, 0.5, -40)
+EspPreviewBox.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+EspPreviewBox.BackgroundTransparency = 1
+EspPreviewBox.BorderSizePixel = 1
+EspPreviewBox.BorderColor3 = Color3.fromRGB(255, 255, 255)
+EspPreviewBox.Visible = false
+EspPreviewBox.Parent = PreviewPanel
+
+-- Превью Chams
+local ChamsPreviewBody = Instance.new("Frame")
+ChamsPreviewBody.Size = UDim2.new(0, 40, 0, 60)
+ChamsPreviewBody.Position = UDim2.new(0.5, -20, 0.5, -30)
+ChamsPreviewBody.BackgroundColor3 = Config.Chams.FillColor
+ChamsPreviewBody.BorderSizePixel = 2
+ChamsPreviewBody.BorderColor3 = Config.Chams.OutlineColor
+ChamsPreviewBody.Visible = false
+ChamsPreviewBody.Parent = PreviewPanel
+
+local function UpdatePreviewPanel(showType)
+    local targetPos = UDim2.new(1, 0, 0.5, -75)
+    if showType == "ESP" then
+        targetPos = UDim2.new(1, -210, 0.5, -75)
+        EspPreviewBox.Visible = true
+        ChamsPreviewBody.Visible = false
+    elseif showType == "Chams" then
+        targetPos = UDim2.new(1, -210, 0.5, -75)
+        EspPreviewBox.Visible = false
+        ChamsPreviewBody.Visible = true
+    else
+        EspPreviewBox.Visible = false
+        ChamsPreviewBody.Visible = false
+    end
+    
+    TweenService:Create(PreviewPanel, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = targetPos}):Play()
+end
 
 local Sections = {"Combat", "Visuals", "Movement", "Misc"}
 local TabsLayout = Instance.new("UIListLayout")
@@ -293,8 +360,10 @@ local function CreateToggle(parent, label, path)
 
             if path[1] == "ESP" and path[2] == "Enabled" then
                 if Config.ESP.Enabled then EnableESP() else DisableESP() end
+                UpdatePreviewPanel(Config.ESP.Enabled and "ESP" or nil)
             elseif path[1] == "Chams" and path[2] == "Enabled" then
                 if Config.Chams.Enabled then EnableChams() else DisableChams() end
+                UpdatePreviewPanel(Config.Chams.Enabled and "Chams" or nil)
             elseif path[1] == "Fly" and path[2] == "Enabled" then
                 if Config.Fly.Enabled then EnableFly() else DisableFly() end
             elseif path[1] == "Speed" and path[2] == "Enabled" then
@@ -305,6 +374,8 @@ local function CreateToggle(parent, label, path)
                 if Config.Collisions.Enabled then EnableCollisions() else DisableCollisions() end
             elseif path[1] == "AutoFarm" and path[2] == "Enabled" then
                 if Config.AutoFarm.Enabled then EnableAutoFarm() else DisableAutoFarm() end
+            elseif path[1] == "ShowCircle" and path[2] == "Enabled" then
+                -- Просто храним настройку
             elseif path[1] == "WhoIs" and path[2] == "Enabled" then
                 if Config.WhoIs.Enabled then EnableWhoIs() else DisableWhoIs() end
             elseif path[1] == "SkyColor" and path[2] == "Enabled" then
@@ -469,7 +540,11 @@ local function CreateColorButton(parent, label, path, colorList)
                     end
                 end
 
-                if path[1] == "Chams" and (path[2] == "FillColor" or path[2] == "OutlineColor") then UpdateChamsColors() end
+                if path[1] == "Chams" and (path[2] == "FillColor" or path[2] == "OutlineColor") then
+                    UpdateChamsColors()
+                    ChamsPreviewBody.BackgroundColor3 = Config.Chams.FillColor
+                    ChamsPreviewBody.BorderColor3 = Config.Chams.OutlineColor
+                end
                 if path[1] == "FOV" and path[2] == "Color" then CreateFOVCircle() end
                 if path[1] == "SkyColor" and path[2] == "Color" then ApplySkyColor() end
             end
@@ -486,6 +561,7 @@ local function CreateColorButton(parent, label, path, colorList)
     end
 end
 
+-- UI Build
 local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
 CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"})
@@ -597,6 +673,11 @@ CreateColorButton(skyPanel, "Color", {"SkyColor","Color"}, {Color3.fromRGB(135,2
 skyPanel.Size = UDim2.new(1, -10, 0, 100)
 skyPanel.Position = UDim2.new(0, 5, 0, 670)
 
+local circlePanel = CreateSettingPanel(MiscTab, "Show Circle")
+CreateToggle(circlePanel, "Enable", {"ShowCircle","Enabled"})
+circlePanel.Size = UDim2.new(1, -10, 0, 60)
+circlePanel.Position = UDim2.new(0, 5, 0, 780)
+
 local function SwitchTab(name)
     for _, tab in pairs(AllTabs) do
         tab.Visible = false
@@ -638,7 +719,7 @@ local function FindHead(char)
     return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart")
 end
 
--- НОВАЯ ЛОГИКА ПОИСКА ЦЕЛИ (по центру экрана)
+-- Wall Shot FIX: Игнорируем стены, если включено
 local function GetClosestTargetInFOV()
     local closest = nil
     local bestDist = Config.FOV.Radius
@@ -652,7 +733,6 @@ local function GetClosestTargetInFOV()
             local hrp = player.Character:FindFirstChild("HumanoidRootPart") or FindTorso(player.Character)
             local head = FindHead(player.Character)
             if hrp and head then
-                -- Проверка видимости, если WallShot выключен
                 if not Config.WallShot.Enabled then
                     local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * (myPos.Position - head.Position).Magnitude)
                     local hit, hitPart = workspace:FindPartOnRay(ray, LocalPlayer.Character)
@@ -674,7 +754,6 @@ local function GetClosestTargetInFOV()
     return closest
 end
 
--- Трейсер (улучшенный)
 local function CreateTracer(startPos, endPos)
     if not Config.Tracer.Enabled then return end
     local start, onScreen1 = Camera:WorldToViewportPoint(startPos)
@@ -697,7 +776,6 @@ local function CreateTracer(startPos, endPos)
     end)
 end
 
--- Атака (перехват выстрела)
 local function AttemptAttack()
     local target = GetClosestTargetInFOV()
     if target and target.Character then
@@ -750,7 +828,7 @@ RunService.RenderStepped:Connect(function()
             if aimPart then
                 local camPos = Camera.CFrame.Position
                 local desired = CFrame.new(camPos, aimPart.Position)
-                Camera.CFrame = Camera.CFrame:Lerp(desired, 0.25) -- Плавное наведение
+                Camera.CFrame = Camera.CFrame:Lerp(desired, 0.25)
             end
         end
     end
@@ -783,7 +861,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ESP (без изменений)
+-- ESP
 local function RemoveESPForPlayer(player)
     local data = ESPCache[player]
     if data then
@@ -1011,7 +1089,7 @@ Players.PlayerAdded:Connect(function(player)
     end)
 end)
 
--- Fly, Speed, Spin, Collisions
+-- Fly (Исправлено)
 function EnableFly()
     FlyActive = true
     local char = LocalPlayer.Character
@@ -1093,7 +1171,7 @@ function DisableCollisions()
     end
 end
 
--- Auto Farm
+-- Auto Farm (Исправлено, без задержек)
 function IsCoin(obj)
     if obj:IsA("BasePart") and (obj.Name:lower():find("coin") or obj.Name:lower():find("money") or obj.Name:lower():find("pickup")) then
         return true
@@ -1216,7 +1294,119 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- WhoIs (новый подход по оружию)
+-- Bunny Hop (CS:GO Style)
+RunService.Heartbeat:Connect(function()
+    if Config.BunnyHop.Enabled then
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChild("Humanoid") then
+                local humanoid = char.Humanoid
+                local state = humanoid:GetState()
+                if state == Enum.HumanoidStateType.Landed or state == Enum.HumanoidStateType.Running then
+                    humanoid.Jump = true
+                    if tick() - LastBhopTime > 0.1 then
+                        BhopSpeed = math.min(BhopSpeed + 5, Config.BunnyHop.MaxSpeed)
+                        humanoid.WalkSpeed = BhopSpeed
+                        LastBhopTime = tick()
+                    end
+                end
+            end
+        else
+            BhopSpeed = 16
+        end
+    end
+end)
+
+-- Show Circle (Анимация при приземлении)
+RunService.Heartbeat:Connect(function()
+    if Config.ShowCircle.Enabled and LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            local state = humanoid:GetState()
+            if LastState == Enum.HumanoidStateType.Freefall and (state == Enum.HumanoidStateType.Landed or state == Enum.HumanoidStateType.Running) then
+                local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    local circle = Drawing.new("Circle")
+                    circle.Position = Camera:WorldToViewportPoint(hrp.Position)
+                    circle.Radius = 5
+                    circle.Thickness = 3
+                    circle.Color = Color3.fromRGB(255, 255, 255)
+                    circle.Transparency = 1
+                    circle.Visible = true
+                    
+                    local startTime = tick()
+                    task.spawn(function()
+                        while tick() - startTime < 0.5 do
+                            local elapsed = tick() - startTime
+                            circle.Radius = 5 + elapsed * 25
+                            circle.Transparency = 1 - (elapsed * 2)
+                            circle.Position = Camera:WorldToViewportPoint(hrp.Position)
+                            task.wait()
+                        end
+                        circle:Remove()
+                    end)
+                end
+            end
+            LastState = state
+        end
+    end
+end)
+
+-- Fly, Speed, Spin, Collisions (Основной цикл)
+RunService.RenderStepped:Connect(function()
+    if FlyActive and LocalPlayer.Character then
+        local char = LocalPlayer.Character
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local humanoid = char:FindFirstChild("Humanoid")
+        if hrp and humanoid then
+            local moveDir = humanoid.MoveDirection
+            local vel = moveDir * Config.Fly.Speed
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) or humanoid.Jump then
+                vel = vel + Vector3.new(0, 50, 0)
+                humanoid.Jump = false
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+                vel = vel - Vector3.new(0, 50, 0)
+            end
+            vel = vel + Vector3.new(0, Config.Fly.HeightOffset, 0)
+            hrp.AssemblyLinearVelocity = vel
+            humanoid.PlatformStand = true
+        end
+    end
+
+    if SpeedActive and LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid then humanoid.WalkSpeed = Config.Speed.Speed end
+    end
+end)
+
+-- Sky Color (Исправлено - заливка одним цветом)
+local OriginalSky = nil
+function ApplySkyColor()
+    local sky = Lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky")
+    if not sky.Parent then sky.Parent = Lighting end
+    OriginalSky = OriginalSky or sky:Clone()
+    sky.SkyColor = Config.SkyColor.Color
+    sky.CloudColor = Config.SkyColor.Color
+    sky.StarColor = Config.SkyColor.Color
+    Lighting.Ambient = Config.SkyColor.Color
+    Lighting.OutdoorAmbient = Config.SkyColor.Color
+    SkyChanged = true
+end
+
+function ResetSkyColor()
+    if OriginalSky then
+        local current = Lighting:FindFirstChildOfClass("Sky")
+        if current then current:Destroy() end
+        OriginalSky.Parent = Lighting
+        OriginalSky = nil
+        SkyChanged = false
+        Lighting.Ambient = Color3.fromRGB(128, 128, 128)
+        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+    end
+end
+
+-- WhoIs
 local RoleDisplay = Instance.new("TextLabel")
 RoleDisplay.Size = UDim2.new(0, 300, 0, 30)
 RoleDisplay.Position = UDim2.new(0.5, -150, 0, 60)
@@ -1240,10 +1430,6 @@ local function GetPlayerRole(player)
             return "Sheriff"
         end
     end
-    local role = player:GetAttribute("Role")
-    if role then
-        return tostring(role)
-    end
     return nil
 end
 
@@ -1255,31 +1441,6 @@ end
 function DisableWhoIs()
     WhoIsActive = false
     RoleDisplay.Visible = false
-end
-
--- Sky Color (исправленный)
-local OriginalSky = nil
-function ApplySkyColor()
-    local sky = Lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky")
-    if not sky.Parent then sky.Parent = Lighting end
-    OriginalSky = OriginalSky or sky:Clone()
-    sky.SkyColor = Config.SkyColor.Color
-    sky.StarColor = Config.SkyColor.Color
-    Lighting.Ambient = Config.SkyColor.Color
-    Lighting.OutdoorAmbient = Config.SkyColor.Color
-    SkyChanged = true
-end
-
-function ResetSkyColor()
-    if OriginalSky then
-        local current = Lighting:FindFirstChildOfClass("Sky")
-        if current then current:Destroy() end
-        OriginalSky.Parent = Lighting
-        OriginalSky = nil
-        SkyChanged = false
-        Lighting.Ambient = Color3.fromRGB(128, 128, 128)
-        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
-    end
 end
 
 -- Watermark and Speed Indicator
@@ -1349,7 +1510,7 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- Кнопка меню и логика открытия
+-- Кнопка меню
 local isDraggingCircle = false
 local dragStartCircle = Vector2.new()
 local dragOffsetCircle = Vector2.new()
@@ -1449,4 +1610,4 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
-print("Hiruku MM2 Script Loaded! (Fixed Version)")
+print("Hiruku MM2 Script Loaded!")
