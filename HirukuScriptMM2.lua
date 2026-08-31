@@ -25,10 +25,8 @@ local Config = {
     SpeedIndicator = {Enabled = true},
     AutoFarm = {Enabled = false, Speed = 35},
     Tracer = {Enabled = false},
-    AutoWin = {Enabled = false},
     WhoIs = {Enabled = false},
-    SkyColor = {Enabled = false, Color = Color3.fromRGB(135,206,235)},
-    ChanceModifier = {Enabled = false, Value = 50}
+    SkyColor = {Enabled = false, Color = Color3.fromRGB(135,206,235)}
 }
 
 local MenuOpen = false
@@ -39,7 +37,6 @@ local SpeedActive = false
 local SpinActive = false
 local CollisionsActive = false
 local AutoFarmActive = false
-local AutoWinActive = false
 local WhoIsActive = false
 local CurrentFPS = 0
 local LastFrameTime = tick()
@@ -49,7 +46,6 @@ local ChamsObjects = {}
 local BhopSpeed = 16
 local LastBhopTime = 0
 local triggerDelay = 0
-local TracerLines = {}
 local SkyChanged = false
 local AutoFarmTarget = nil
 local AutoFarmCoins = {}
@@ -154,6 +150,7 @@ ContentArea.BorderSizePixel = 0
 ContentArea.ScrollBarThickness = 3
 ContentArea.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
 ContentArea.Parent = MainFrame
+ContentArea.CanvasSize = UDim2.new(0, 0, 0, 900) -- Исправление скролла
 
 local contentCorner = Instance.new("UICorner")
 contentCorner.CornerRadius = UDim.new(0, 12)
@@ -308,16 +305,10 @@ local function CreateToggle(parent, label, path)
                 if Config.Collisions.Enabled then EnableCollisions() else DisableCollisions() end
             elseif path[1] == "AutoFarm" and path[2] == "Enabled" then
                 if Config.AutoFarm.Enabled then EnableAutoFarm() else DisableAutoFarm() end
-            elseif path[1] == "Tracer" and path[2] == "Enabled" then
-                -- just store setting
-            elseif path[1] == "AutoWin" and path[2] == "Enabled" then
-                if Config.AutoWin.Enabled then EnableAutoWin() else DisableAutoWin() end
             elseif path[1] == "WhoIs" and path[2] == "Enabled" then
                 if Config.WhoIs.Enabled then EnableWhoIs() else DisableWhoIs() end
             elseif path[1] == "SkyColor" and path[2] == "Enabled" then
                 if Config.SkyColor.Enabled then ApplySkyColor() else ResetSkyColor() end
-            elseif path[1] == "ChanceModifier" and path[2] == "Enabled" then
-                if Config.ChanceModifier.Enabled then ApplyChanceModifier() else ResetChanceModifier() end
             end
         end
     end)
@@ -399,7 +390,6 @@ local function CreateSlider(parent, label, path, min, max, decimal)
             current[path[#path]] = value
             UpdateSlider()
             if path[1] == "Chams" and path[2] == "Transparency" then UpdateChamsTransparency() end
-            if path[1] == "ChanceModifier" and path[2] == "Value" then ApplyChanceModifier() end
         end
     end)
     slider.InputChanged:Connect(function(input)
@@ -413,7 +403,6 @@ local function CreateSlider(parent, label, path, min, max, decimal)
             current[path[#path]] = value
             UpdateSlider()
             if path[1] == "Chams" and path[2] == "Transparency" then UpdateChamsTransparency() end
-            if path[1] == "ChanceModifier" and path[2] == "Value" then ApplyChanceModifier() end
         end
     end)
     slider.InputEnded:Connect(function(input)
@@ -497,7 +486,6 @@ local function CreateColorButton(parent, label, path, colorList)
     end
 end
 
--- UI Build
 local CombatTab = AllTabs["Combat"]
 local aimPanel = CreateSettingPanel(CombatTab, "AimBot")
 CreateToggle(aimPanel, "Enable", {"AimBot","Enabled"})
@@ -598,27 +586,16 @@ CreateToggle(tracerPanel, "Enable", {"Tracer","Enabled"})
 tracerPanel.Size = UDim2.new(1, -10, 0, 60)
 tracerPanel.Position = UDim2.new(0, 5, 0, 530)
 
-local autoWinPanel = CreateSettingPanel(MiscTab, "Auto Win")
-CreateToggle(autoWinPanel, "Enable", {"AutoWin","Enabled"})
-autoWinPanel.Size = UDim2.new(1, -10, 0, 60)
-autoWinPanel.Position = UDim2.new(0, 5, 0, 600)
-
 local whoIsPanel = CreateSettingPanel(MiscTab, "Who Is")
 CreateToggle(whoIsPanel, "Enable", {"WhoIs","Enabled"})
 whoIsPanel.Size = UDim2.new(1, -10, 0, 60)
-whoIsPanel.Position = UDim2.new(0, 5, 0, 670)
+whoIsPanel.Position = UDim2.new(0, 5, 0, 600)
 
 local skyPanel = CreateSettingPanel(MiscTab, "Sky Color")
 CreateToggle(skyPanel, "Enable", {"SkyColor","Enabled"})
 CreateColorButton(skyPanel, "Color", {"SkyColor","Color"}, {Color3.fromRGB(135,206,235), Color3.fromRGB(0,0,0), Color3.fromRGB(255,255,255), Color3.fromRGB(255,0,0)})
 skyPanel.Size = UDim2.new(1, -10, 0, 100)
-skyPanel.Position = UDim2.new(0, 5, 0, 740)
-
-local chancePanel = CreateSettingPanel(MiscTab, "Chance Modifier")
-CreateToggle(chancePanel, "Enable", {"ChanceModifier","Enabled"})
-CreateSlider(chancePanel, "Value", {"ChanceModifier","Value"}, 1, 100, false)
-chancePanel.Size = UDim2.new(1, -10, 0, 130)
-chancePanel.Position = UDim2.new(0, 5, 0, 850)
+skyPanel.Position = UDim2.new(0, 5, 0, 670)
 
 local function SwitchTab(name)
     for _, tab in pairs(AllTabs) do
@@ -661,32 +638,35 @@ local function FindHead(char)
     return char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart")
 end
 
-local function GetTargetInFOV(range, ignoreWalls)
+-- НОВАЯ ЛОГИКА ПОИСКА ЦЕЛИ (по центру экрана)
+local function GetClosestTargetInFOV()
     local closest = nil
-    local bestDist = range
+    local bestDist = Config.FOV.Radius
     local myPos = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myPos then return nil end
 
-    local camPos = Camera.CFrame.Position
-    local camLook = Camera.CFrame.LookVector
+    local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") and player.Character.Humanoid.Health > 0 then
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart") or FindTorso(player.Character)
             local head = FindHead(player.Character)
-            if head then
-                if not ignoreWalls then
-                    local ray = Ray.new(camPos, (head.Position - camPos).Unit * (camPos - head.Position).Magnitude)
+            if hrp and head then
+                -- Проверка видимости, если WallShot выключен
+                if not Config.WallShot.Enabled then
+                    local ray = Ray.new(myPos.Position, (head.Position - myPos.Position).Unit * (myPos.Position - head.Position).Magnitude)
                     local hit, hitPart = workspace:FindPartOnRay(ray, LocalPlayer.Character)
                     if hit and not hitPart:IsDescendantOf(player.Character) then
                         continue
                     end
                 end
-                local dirToTarget = (head.Position - camPos).Unit
-                local dot = camLook:Dot(dirToTarget)
-                local angle = math.acos(math.clamp(dot, -1, 1)) * 57.2958
-                if angle < bestDist then
-                    bestDist = angle
-                    closest = player
+                local headPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                if onScreen then
+                    local dist = (headPos - center).Magnitude
+                    if dist < bestDist then
+                        bestDist = dist
+                        closest = player
+                    end
                 end
             end
         end
@@ -694,49 +674,47 @@ local function GetTargetInFOV(range, ignoreWalls)
     return closest
 end
 
+-- Трейсер (улучшенный)
 local function CreateTracer(startPos, endPos)
     if not Config.Tracer.Enabled then return end
+    local start, onScreen1 = Camera:WorldToViewportPoint(startPos)
+    local finish, onScreen2 = Camera:WorldToViewportPoint(endPos)
+    if not onScreen1 and not onScreen2 then return end
+
     local line = Drawing.new("Line")
     line.Thickness = 2
     line.Color = Color3.fromRGB(255, 255, 0)
-    line.Transparency = 0.8
-    line.From = Camera:WorldToViewportPoint(startPos)
-    line.To = Camera:WorldToViewportPoint(endPos)
+    line.Transparency = 0.9
+    line.From = Vector2.new(start.X, start.Y)
+    line.To = Vector2.new(finish.X, finish.Y)
     line.Visible = true
-    table.insert(TracerLines, line)
-    task.delay(0.2, function()
-        line:Remove()
-        table.remove(TracerLines, table.find(TracerLines, line))
+    
+    task.delay(0.1, function()
+        line.Visible = false
+        task.delay(0.5, function()
+            line:Remove()
+        end)
     end)
 end
 
+-- Атака (перехват выстрела)
 local function AttemptAttack()
-    local ignoreWalls = Config.WallShot.Enabled
-    local target = GetTargetInFOV(Config.FOV.Radius, ignoreWalls)
-    
+    local target = GetClosestTargetInFOV()
     if target and target.Character then
-        local aimPart = FindHead(target.Character)
-        if aimPart then
-            local camPos = Camera.CFrame.Position
-            Camera.CFrame = CFrame.new(camPos, aimPart.Position)
-            
+        local head = FindHead(target.Character)
+        if head then
             local char = LocalPlayer.Character
             if char then
-                local tool = nil
-                for _, child in ipairs(char:GetChildren()) do
-                    if child:IsA("Tool") then tool = child break end
-                end
+                local tool = char:FindFirstChildOfClass("Tool")
                 if tool then
                     pcall(function() tool:Activate() end)
                     for _, remote in ipairs(ReplicatedStorage:GetChildren()) do
                         if remote:IsA("RemoteEvent") then
-                            pcall(function() remote:FireServer(aimPart.Position) end)
+                            pcall(function() remote:FireServer(head.Position) end)
                         end
                     end
                     if Config.Tracer.Enabled then
-                        local handle = tool:FindFirstChild("Handle") or char:FindFirstChild("HumanoidRootPart")
-                        local startPos = handle and handle.Position or char.HumanoidRootPart.Position
-                        CreateTracer(startPos, aimPart.Position)
+                        CreateTracer(char.HumanoidRootPart.Position, head.Position)
                     end
                 end
             end
@@ -766,14 +744,13 @@ RunService.RenderStepped:Connect(function()
     end
 
     if Config.AimBot.Enabled and not MenuOpen then
-        local ignoreWalls = Config.WallShot.Enabled
-        local target = GetTargetInFOV(Config.FOV.Radius, ignoreWalls)
+        local target = GetClosestTargetInFOV()
         if target and target.Character then
             local aimPart = FindHead(target.Character)
             if aimPart then
                 local camPos = Camera.CFrame.Position
                 local desired = CFrame.new(camPos, aimPart.Position)
-                Camera.CFrame = Camera.CFrame:Lerp(desired, 0.2)
+                Camera.CFrame = Camera.CFrame:Lerp(desired, 0.25) -- Плавное наведение
             end
         end
     end
@@ -781,8 +758,7 @@ RunService.RenderStepped:Connect(function()
     if Config.Trigger.Enabled and not MenuOpen then
         triggerDelay = triggerDelay + 1
         if triggerDelay >= Config.Trigger.Delay then
-            local ignoreWalls = Config.WallShot.Enabled
-            local target = GetTargetInFOV(Config.FOV.Radius, ignoreWalls)
+            local target = GetClosestTargetInFOV()
             if target then
                 local hrp = target.Character and target.Character:FindFirstChild("HumanoidRootPart")
                 if hrp then
@@ -807,7 +783,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ESP
+-- ESP (без изменений)
 local function RemoveESPForPlayer(player)
     local data = ESPCache[player]
     if data then
@@ -1117,7 +1093,7 @@ function DisableCollisions()
     end
 end
 
--- Auto Farm (Исправленный)
+-- Auto Farm
 function IsCoin(obj)
     if obj:IsA("BasePart") and (obj.Name:lower():find("coin") or obj.Name:lower():find("money") or obj.Name:lower():find("pickup")) then
         return true
@@ -1144,7 +1120,6 @@ end
 
 function EnableAutoFarm()
     AutoFarmActive = true
-    -- Отключаем гравитацию и коллизии
     local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
     if humanoid then
         humanoid.PlatformStand = true
@@ -1156,7 +1131,6 @@ function EnableAutoFarm()
             v.CanCollide = false
         end
     end
-    -- Создаём трейсеры для монет
     for _, obj in ipairs(workspace:GetDescendants()) do
         if IsCoin(obj) then
             if not AutoFarmCoins[obj] then
@@ -1194,7 +1168,6 @@ function DisableAutoFarm()
     end
 end
 
--- Цикл Auto Farm: плавный полёт к ближайшей монете со скоростью 35 стадов/сек
 RunService.RenderStepped:Connect(function(dt)
     if AutoFarmActive and LocalPlayer.Character then
         local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -1204,7 +1177,6 @@ RunService.RenderStepped:Connect(function(dt)
             humanoid.WalkSpeed = 0
             hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
 
-            -- Обновляем трейсеры
             for obj, line in pairs(AutoFarmCoins) do
                 if obj and obj.Parent then
                     local pos, onScreen = Camera:WorldToViewportPoint(obj.Position)
@@ -1221,23 +1193,19 @@ RunService.RenderStepped:Connect(function(dt)
                 end
             end
 
-            -- Если цель не существует, ищем новую
             if not AutoFarmTarget or not AutoFarmTarget.Parent then
                 AutoFarmTarget = FindClosestCoin()
             end
 
-            -- Движение к цели
             if AutoFarmTarget then
                 local targetPos = AutoFarmTarget.Position
                 local distance = (hrp.Position - targetPos).Magnitude
                 local step = Config.AutoFarm.Speed * dt
 
                 if distance <= step then
-                    -- Достигли монеты – телепортируемся прямо в неё
                     hrp.CFrame = CFrame.new(targetPos)
                     AutoFarmTarget = nil
                 else
-                    -- Иначе летим по направлению к цели
                     local direction = (targetPos - hrp.Position).Unit
                     local newPos = hrp.Position + direction * step
                     hrp.CFrame = CFrame.new(newPos)
@@ -1248,21 +1216,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- Auto Win
-function EnableAutoWin()
-    AutoWinActive = true
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
-            player.Character.Humanoid.Health = 0
-        end
-    end
-end
-
-function DisableAutoWin()
-    AutoWinActive = false
-end
-
--- WhoIs
+-- WhoIs (новый подход по оружию)
 local RoleDisplay = Instance.new("TextLabel")
 RoleDisplay.Size = UDim2.new(0, 300, 0, 30)
 RoleDisplay.Position = UDim2.new(0.5, -150, 0, 60)
@@ -1275,6 +1229,24 @@ RoleDisplay.ZIndex = 300
 RoleDisplay.Visible = false
 RoleDisplay.Parent = ScreenGui
 
+local function GetPlayerRole(player)
+    if not player.Character then return nil end
+    local tool = player.Character:FindFirstChildOfClass("Tool")
+    if tool then
+        local name = tool.Name:lower()
+        if name:find("knife") or name:find("murder") or name:find("killer") then
+            return "Murderer"
+        elseif name:find("gun") or name:find("sheriff") or name:find("pistol") or name:find("revolver") then
+            return "Sheriff"
+        end
+    end
+    local role = player:GetAttribute("Role")
+    if role then
+        return tostring(role)
+    end
+    return nil
+end
+
 function EnableWhoIs()
     WhoIsActive = true
     RoleDisplay.Visible = true
@@ -1285,44 +1257,29 @@ function DisableWhoIs()
     RoleDisplay.Visible = false
 end
 
--- Sky Color
+-- Sky Color (исправленный)
 local OriginalSky = nil
 function ApplySkyColor()
-    local sky = Lighting:FindFirstChild("Sky") or Instance.new("Sky")
+    local sky = Lighting:FindFirstChildOfClass("Sky") or Instance.new("Sky")
     if not sky.Parent then sky.Parent = Lighting end
     OriginalSky = OriginalSky or sky:Clone()
     sky.SkyColor = Config.SkyColor.Color
     sky.StarColor = Config.SkyColor.Color
+    Lighting.Ambient = Config.SkyColor.Color
+    Lighting.OutdoorAmbient = Config.SkyColor.Color
     SkyChanged = true
 end
 
 function ResetSkyColor()
     if OriginalSky then
-        local current = Lighting:FindFirstChild("Sky")
+        local current = Lighting:FindFirstChildOfClass("Sky")
         if current then current:Destroy() end
         OriginalSky.Parent = Lighting
         OriginalSky = nil
         SkyChanged = false
+        Lighting.Ambient = Color3.fromRGB(128, 128, 128)
+        Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
     end
-end
-
--- Chance Modifier
-function ApplyChanceModifier()
-    local chanceEvents = {}
-    for _, v in ipairs(ReplicatedStorage:GetChildren()) do
-        if v:IsA("RemoteEvent") and (v.Name:lower():find("chance") or v.Name:lower():find("role")) then
-            table.insert(chanceEvents, v)
-        end
-    end
-    for _, remote in ipairs(chanceEvents) do
-        pcall(function()
-            remote:FireServer(Config.ChanceModifier.Value)
-        end)
-    end
-end
-
-function ResetChanceModifier()
-    -- no op
 end
 
 -- Watermark and Speed Indicator
@@ -1383,22 +1340,16 @@ RunService.Heartbeat:Connect(function()
         local murderer = nil
         for _, player in ipairs(Players:GetPlayers()) do
             if player ~= LocalPlayer then
-                local role = player:GetAttribute("Role") or (player:FindFirstChild("leaderstats") and player.leaderstats:FindFirstChild("Role"))
-                if role then
-                    if role.Value == "Sheriff" or role.Value == "Murderer" then
-                        if role.Value == "Sheriff" then sheriff = player.Name end
-                        if role.Value == "Murderer" then murderer = player.Name end
-                    end
-                end
+                local role = GetPlayerRole(player)
+                if role == "Sheriff" then sheriff = player.Name end
+                if role == "Murderer" then murderer = player.Name end
             end
         end
         RoleDisplay.Text = "Sheriff: " .. (sheriff or "none") .. "\nMurderer: " .. (murderer or "none")
     end
 end)
 
--- Убираем перетаскивание меню (статичное)
--- Не подключаем обработчики перемещения
-
+-- Кнопка меню и логика открытия
 local isDraggingCircle = false
 local dragStartCircle = Vector2.new()
 local dragOffsetCircle = Vector2.new()
@@ -1498,4 +1449,4 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 if Config.FOVCircle.Enabled then CreateFOVCircle() end
-print("Hiruku MM2 Script Loaded!")
+print("Hiruku MM2 Script Loaded! (Fixed Version)")
